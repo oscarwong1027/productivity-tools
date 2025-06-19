@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI-Powered Tools Collection</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        color: #333;
+    }
+
+    .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    header {
+        text-align: center;
+        margin-bottom: 50px;
+        padding: 40px 0;
+        color: white;
+    }
+
+    h1 {
+        font-size: 3.5rem;
+        font-weight: 700;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        margin-bottom: 10px;
+        animation: fadeInDown 1s ease-out;
+    }
+
+    .subtitle {
+        font-size: 1.4rem;
+        font-weight: 400;
+        margin-bottom: 5px;
+        opacity: 0.9;
+        animation: fadeInUp 1s ease-out 0.3s both;
+    }
+
+    .creator {
+        font-size: 1.1rem;
+        font-weight: 300;
+        opacity: 0.7;
+        margin-bottom: 20px;
+        font-style: italic;
+    }
+
+    .tools-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 25px;
+        margin-top: 40px;
+    }
+
+    .tool-card {
+        background: white;
+        border-radius: 20px;
+        padding: 25px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        animation: fadeInUp 0.8s ease-out;
+    }
+
+    .tool-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+    }
+
+    .tool-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 5px;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+    }
+
+    .tool-icon {
+        font-size: 2.5rem;
+        margin-bottom: 15px;
+        display: block;
+        text-align: center;
+    }
+
+    .edit-icon { color: #9b59b6; }
+    .convert-icon { color: #f39c12; }
+    .split-icon { color: #27ae60; }
+    .time-icon { color: #3498db; }
+    .color-icon { color: #e74c3c; }
+    .joke-icon { color: #f1c40f; }
+    .weather-icon { color: #2ecc71; }
+    .currency-icon { color: #e67e22; }
+
+    .tool-title {
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin-bottom: 12px;
+        color: #2c3e50;
+        text-align: center;
+    }
+
+    .tool-description {
+        color: #7f8c8d;
+        margin-bottom: 20px;
+        text-align: center;
+        line-height: 1.5;
+        font-size: 0.95rem;
+    }
+
+    .tool-link {
+        display: inline-block;
+        width: 100%;
+        padding: 12px 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        text-decoration: none;
+        border-radius: 50px;
+        text-align: center;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        font-size: 0.9rem;
+    }
+
+    .tool-link::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.5s;
+    }
+
+    .tool-link:hover::before {
+        left: 100%;
+    }
+
+    .tool-link:hover {
+        transform: scale(1.05);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    }
+
+    .stats {
+        text-align: center;
+        margin: 40px 0;
+        color: rgba(255, 255, 255, 0.9);
+    }
+
+    .stats h3 {
+        font-size: 1.5rem;
+        margin-bottom: 10px;
+    }
+
+    .stats p {
+        font-size: 1.1rem;
+        opacity: 0.8;
+    }
+
+    footer.footer {
+        text-align: center;
+        margin-top: 60px;
+        padding: 30px;
+        color: rgba(255, 255, 255, 0.8);
+        font-style: italic;
+        font-weight: 300;
+        font-size: 1.1rem;
+    }
+
+    @keyframes fadeInDown {
+        from {
+            opacity: 0;
+            transform: translateY(-30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .container {
+            max-width: 100%;
+            padding: 15px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+        }
+
+        .tools-grid {
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .tool-card {
+            padding: 20px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        h1 {
+            font-size: 2rem;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1><i class="fas fa-robot"></i> AI-Powered Tools</h1>
+        <p class="subtitle">Enhancing productivity through intelligent automation</p>
+        <p class="creator">Created by Oscar</p>
+    </header>
+
+    <div class="stats">
+        <h3>8 Powerful Tools Available</h3>
+        <p>Everything you need for productivity and convenience</p>
+    </div>
+
+    <div class="tools-grid">
+        <div class="tool-card">
+            <i class="fas fa-file-pdf tool-icon edit-icon"></i>
+            <h2 class="tool-title">Advanced PDF Editor</h2>
+            <p class="tool-description">Complete PDF editing suite with upload, selection, reordering, merging, and preview capabilities.</p>
+            <a href="./Local HTML PDF Editor - Upload multiple PDFs, select page ranges, reorder, merge, preview, and download v2.html" class="tool-link">
+                <i class="fas fa-arrow-right"></i> Launch Tool
+            </a>
+        </div>
+
+        <div class="tool-card">
+            <i class="fas fa-image tool-icon convert-icon"></i>
+            <h2 class="tool-title">HEIC to JPG/PNG Converter</h2>
+            <p class="tool-description">Convert Apple's HEIC image format to widely compatible JPG and PNG formats instantly.</p>
+            <a href="./HEIC to JPGPNG Converter.html" class="tool-link">
+                <i class="fas fa-arrow-right"></i> Launch Tool
+            </a>
+        </div>
+
+        <div class="tool-card">
+            <i class="fas fa-calculator tool-icon split-icon"></i>
+            <h2 class="tool-title">Smart Expense Splitter</h2>
+            <p class="tool-description">Fairly divide expenses among groups with intelligent calculation and detailed breakdowns.</p>
+            <a href="./Expense Splitter v3.html" class="tool-link">
+                <i class="fas fa-arrow-right"></i> Launch Tool
+            </a>
+        </div>
+
+        <div class="tool-card">
+            <i class="fas fa-clock tool-icon time-icon"></i>
+            <h2 class="tool-title">Time Zone Converter</h2>
+            <p class="tool-description">Convert time across different time zones with real-time updates and world clock display.</p>
+            <a href="./Time Zone Converter.html" class="tool-link">
+                <i class="fas fa-arrow-right"></i> Launch Tool
+            </a>
+        </div>
+
+        <div class="tool-card">
+            <i class="fas fa-palette tool-icon color-icon"></i>
+            <h2 class="tool-title">Advanced Color Palette Generator</h2>
+            <p class="tool-description">Generate beautiful color palettes with various harmony rules and export options for designers.</p>
+            <a href="./Advanced Color Palette Generator.html" class="tool-link">
+                <i class="fas fa-arrow-right"></i> Launch Tool
+            </a>
+        </div>
+
+        <div class="tool-card">
+            <i class="fas fa-laugh tool-icon joke-icon"></i>
+            <h2 class="tool-title">Random Joke Generator</h2>
+            <p class="tool-description">Brighten your day with random jokes from various categories. Perfect for breaking the ice!</p>
+            <a href="./Random Joke Generator.html" class="tool-link">
+                <i class="fas fa-arrow-right"></i> Launch Tool
+            </a>
+        </div>
+
+        <div class="tool-card">
+            <i class="fas fa-cloud-sun tool-icon weather-icon"></i>
+            <h2 class="tool-title">Weather Dashboard</h2>
+            <p class="tool-description">Real-time weather information with detailed forecasts using OpenMeteo API integration.</p>
+            <a href="./Weather Dashboard with OpenMeteo API.html" class="tool-link">
+                <i class="fas fa-arrow-right"></i> Launch Tool
+            </a>
+        </div>
+
+        <div class="tool-card">
+            <i class="fas fa-coins tool-icon currency-icon"></i>
+            <h2 class="tool-title">Enhanced Currency Converter</h2>
+            <p class="tool-description">Convert currencies with real-time exchange rates, multiple selections, and beautiful flag displays.</p>
+            <a href="./Enhanced Currency Converter.html" class="tool-link">
+                <i class="fas fa-arrow-right"></i> Launch Tool
+            </a>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>Enhancing productivity through intelligent automation</p>
+        <p>Created by Oscar</p>
+    </footer>
+</div>
+</body>
+</html>

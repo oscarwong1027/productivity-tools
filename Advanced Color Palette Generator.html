@@ -1,0 +1,289 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Color Palette Generator</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #4b5563, #1f2937);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 700px;
+        }
+        h2 {
+            text-align: center;
+            color: #1f2937;
+            margin-bottom: 20px;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            color: #4b5563;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+        input[type="color"], select {
+            padding: 8px;
+            width: 100%;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+        .palette {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .color {
+            flex: 1;
+            height: 100px;
+            margin: 0 5px;
+            border-radius: 8px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            color: white;
+            text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+            cursor: pointer;
+        }
+        button {
+            padding: 12px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 1em;
+            margin: 10px 0;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        .saved-palettes {
+            margin-top: 20px;
+        }
+        .saved-palette {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        .saved-color {
+            flex: 1;
+            height: 50px;
+            margin: 0 5px;
+            border-radius: 8px;
+        }
+        #status {
+            text-align: center;
+            color: #1f2937;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Advanced Color Palette Generator</h2>
+        <div class="input-group">
+            <label for="baseColor">Select Base Color</label>
+            <input type="color" id="baseColor" value="#3b82f6">
+        </div>
+        <div class="input-group">
+            <label for="colorPrinciple">Color Theory Principle</label>
+            <select id="colorPrinciple">
+                <option value="complementary">Complementary (High Contrast)</option>
+                <option value="analogous">Analogous (Synchronization)</option>
+                <option value="triadic">Triadic (Balanced Contrast)</option>
+                <option value="monochromatic">Monochromatic (Repetition)</option>
+            </select>
+        </div>
+        <button onclick="generatePalette()">Generate Palette</button>
+        <button onclick="savePalette()">Save Palette</button>
+        <div class="palette" id="palette"></div>
+        <div class="saved-palettes" id="savedPalettes"></div>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        let savedPalettes = JSON.parse(localStorage.getItem('colorPalettes')) || [];
+
+        function hexToHSL(hex) {
+            hex = hex.replace('#', '');
+            const r = parseInt(hex.substr(0, 2), 16) / 255;
+            const g = parseInt(hex.substr(2, 2), 16) / 255;
+            const b = parseInt(hex.substr(4, 2), 16) / 255;
+            const max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+            if (max === min) {
+                h = s = 0;
+            } else {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                    case g: h = (b - r) / d + 2; break;
+                    case b: h = (r - g) / d + 4; break;
+                }
+                h /= 6;
+            }
+            return [h * 360, s * 100, l * 100];
+        }
+
+        function hslToHex(h, s, l) {
+            l /= 100;
+            const a = s * Math.min(l, 1 - l) / 100;
+            const f = n => {
+                const k = (n + h / 30) % 12;
+                const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+                return Math.round(255 * color).toString(16).padStart(2, '0');
+            };
+            return `#${f(0)}${f(8)}${f(4)}`;
+        }
+
+        function generatePalette() {
+            const baseColor = document.getElementById('baseColor').value;
+            const principle = document.getElementById('colorPrinciple').value;
+            const palette = document.getElementById('palette');
+            palette.innerHTML = '';
+            let [h, s, l] = hexToHSL(baseColor);
+            let colors = [];
+
+            if (principle === 'complementary') {
+                colors = [
+                    baseColor,
+                    hslToHex((h + 180) % 360, s, l),
+                    hslToHex(h, s * 0.8, l * 1.2 > 100 ? 100 : l * 1.2),
+                    hslToHex((h + 180) % 360, s * 0.8, l * 0.8),
+                    hslToHex(h, s, l * 0.6)
+                ];
+            } else if (principle === 'analogous') {
+                colors = [
+                    baseColor,
+                    hslToHex((h + 30) % 360, s, l),
+                    hslToHex((h - 30) % 360, s, l),
+                    hslToHex((h + 15) % 360, s * 0.9, l * 1.1 > 100 ? 100 : l * 1.1),
+                    hslToHex((h - 15) % 360, s * 0.9, l * 0.9)
+                ];
+            } else if (principle === 'triadic') {
+                colors = [
+                    baseColor,
+                    hslToHex((h + 120) % 360, s, l),
+                    hslToHex((h + 240) % 360, s, l),
+                    hslToHex((h + 120) % 360, s * 0.8, l * 1.2 > 100 ? 100 : l * 1.2),
+                    hslToHex((h + 240) % 360, s * 0.8, l * 0.8)
+                ];
+            } else if (principle === 'monochromatic') {
+                colors = [
+                    baseColor,
+                    hslToHex(h, s * 0.9, l * 1.2 > 100 ? 100 : l * 1.2),
+                    hslToHex(h, s * 0.8, l * 0.8),
+                    hslToHex(h, s * 0.7, l * 1.4 > 100 ? 100 : l * 1.4),
+                    hslToHex(h, s * 0.6, l * 0.6)
+                ];
+            }
+
+            colors.forEach(color => {
+                const div = document.createElement('div');
+                div.className = 'color';
+                div.style.backgroundColor = color;
+                div.textContent = color;
+                div.onclick = () => copyToClipboard(color);
+                palette.appendChild(div);
+            });
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                const status = document.getElementById('status');
+                status.textContent = `Copied ${text} to clipboard!`;
+                setTimeout(() => status.textContent = '', 2000);
+            });
+        }
+
+        function savePalette() {
+            const colors = Array.from(document.querySelectorAll('.color')).map(div => div.textContent);
+            if (colors.length) {
+                savedPalettes.push(colors);
+                localStorage.setItem('colorPalettes', JSON.stringify(savedPalettes));
+                renderSavedPalettes();
+                const status = document.getElementById('status');
+                status.textContent = 'Palette saved!';
+                setTimeout(() => status.textContent = '', 2000);
+            }
+        }
+
+        function renderSavedPalettes() {
+            const savedPalettesDiv = document.getElementById('savedPalettes');
+            savedPalettesDiv.innerHTML = '';
+            savedPalettes.forEach((palette, index) => {
+                const div = document.createElement('div');
+                div.className = 'saved-palette';
+                palette.forEach(color => {
+                    const colorDiv = document.createElement('div');
+                    colorDiv.className = 'saved-color';
+                    colorDiv.style.backgroundColor = color;
+                    colorDiv.onclick = () => copyToClipboard(color);
+                    div.appendChild(colorDiv);
+                });
+                savedPalettesDiv.appendChild(div);
+            });
+        }
+
+        generatePalette();
+        renderSavedPalettes();
+    </script>
+</body>
+</html>

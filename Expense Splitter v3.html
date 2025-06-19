@@ -1,0 +1,324 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Splitter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.22.10/babel.min.js"></script>
+</head>
+<body class="bg-gradient-to-br from-indigo-100 to-purple-100 antialiased">
+    <div id="root" className="min-h-screen flex items-center justify-center p-6"></div>
+
+    <script type="text/babel">
+        function App() {
+            const [peopleCount, setPeopleCount] = React.useState(0);
+            const [people, setPeople] = React.useState([]);
+            const [expenses, setExpenses] = React.useState([]);
+            const [settlements, setSettlements] = React.useState([]);
+            const [names, setNames] = React.useState([]);
+
+            const handlePeopleSubmit = (e) => {
+                e.preventDefault();
+                const count = parseInt(e.target.peopleCount.value);
+                const newNames = Array.from(e.target.elements)
+                    .filter(el => el.name.startsWith('name-'))
+                    .map(el => el.value.trim() || `Person ${el.name.split('-')[1]}`);
+                setPeopleCount(count);
+                setPeople(newNames.map((name, i) => ({ id: i + 1, name })));
+                setNames(newNames);
+                setExpenses([]);
+                setSettlements([]);
+            };
+
+            const handlePeopleCountChange = (e) => {
+                const count = parseInt(e.target.value) || 0;
+                setPeopleCount(count);
+                setNames(Array(count).fill(''));
+            };
+
+            const handleNameChange = (index, value) => {
+                const newNames = [...names];
+                newNames[index] = value;
+                setNames(newNames);
+            };
+
+            const addExpense = (e) => {
+                e.preventDefault();
+                const payerId = parseInt(e.target.payer.value);
+                const description = e.target.description.value;
+                const photo = e.target.photo.files[0];
+                const sharedWith = Array.from(e.target.elements)
+                    .filter(el => el.name.startsWith('amount-'))
+                    .map(el => ({
+                        personId: parseInt(el.name.split('-')[1]),
+                        amount: parseFloat(el.value) || 0
+                    }))
+                    .filter(share => share.amount > 0);
+
+                const totalAmount = sharedWith.reduce((sum, share) => sum + share.amount, 0);
+                
+                const newExpense = {
+                    id: expenses.length + 1,
+                    payerId,
+                    description,
+                    sharedWith,
+                    totalAmount,
+                    photo: photo ? URL.createObjectURL(photo) : null
+                };
+
+                const updatedExpenses = [...expenses, newExpense];
+                setExpenses(updatedExpenses);
+                calculateSettlements(updatedExpenses);
+                e.target.reset();
+            };
+
+            const removeExpense = (id) => {
+                const updatedExpenses = expenses.filter(expense => expense.id !== id);
+                setExpenses(updatedExpenses);
+                calculateSettlements(updatedExpenses);
+            };
+
+            const calculateSettlements = (updatedExpenses) => {
+                const balances = people.reduce((acc, person) => ({ ...acc, [person.id]: 0 }), {});
+                
+                updatedExpenses.forEach(expense => {
+                    balances[expense.payerId] += expense.totalAmount;
+                    expense.sharedWith.forEach(({ personId, amount }) => {
+                        balances[personId] -= amount;
+                    });
+                });
+
+                const settlements = [];
+                Object.entries(balances).forEach(([id, balance]) => {
+                    if (balance > 0.01) {
+                        settlements.push({ text: `${people.find(p => p.id === parseInt(id)).name} is owed $${balance.toFixed(2)}`, type: 'owed' });
+                    } else if (balance < -0.01) {
+                        settlements.push({ text: `${people.find(p => p.id === parseInt(id)).name} owes $${Math.abs(balance).toFixed(2)}`, type: 'owes' });
+                    }
+                });
+                setSettlements(settlements);
+            };
+
+            return (
+                <div className="w-full max-w-4xl bg-white rounded-3xl shadow-2xl p-10">
+                    <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 mb-10">Expense Splitter</h1>
+                    
+                    <div className="space-y-10">
+                        <div className="bg-indigo-50 p-6 rounded-xl">
+                            <h2 className="text-2xl font-semibold text-indigo-800 mb-6">Set People</h2>
+                            <form onSubmit={handlePeopleSubmit} className="space-y-6">
+                                <div>
+                                    <label className="block text-sm font-medium text-indigo-700">Number of People</label>
+                                    <input
+                                        type="number"
+                                        name="peopleCount"
+                                        min="2"
+                                        required
+                                        onChange={handlePeopleCountChange}
+                                        className="mt-2 block w-full rounded-lg border-indigo-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-3 bg-white"
+                                    />
+                                </div>
+                                {peopleCount > 0 && (
+                                    <div className="space-y-4">
+                                        {Array.from({ length: peopleCount }).map((_, i) => (
+                                            <div key={i}>
+                                                <label className="block text-sm font-medium text-indigo-700">
+                                                    Person {i + 1}
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    name={`name-${i + 1}`}
+                                                    placeholder={`Person ${i + 1}`}
+                                                    value={names[i] || ''}
+                                                    onChange={(e) => handleNameChange(i, e.target.value)}
+                                                    className="mt-2 block w-full rounded-lg border-indigo-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-3 bg-white"
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                                {peopleCount > 0 && (
+                                    <button
+                                        type="submit"
+                                        className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-3 rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all"
+                                    >
+                                        Confirm People
+                                    </button>
+                                )}
+                            </form>
+                        </div>
+
+                        {people.length > 0 && (
+                            <>
+                                <div className="bg-purple-50 p-6 rounded-xl">
+                                    <h2 className="text-2xl font-semibold text-purple-800 mb-6">Add Expense</h2>
+                                    <form onSubmit={addExpense} className="space-y-6">
+                                        <div>
+                                            <label className="block text-sm font-medium text-purple-700">Description</label>
+                                            <input
+                                                type="text"
+                                                name="description"
+                                                required
+                                                className="mt-2 block w-full rounded-lg border-purple-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm p-3 bg-white"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-purple-700">Paid By</label>
+                                            <select
+                                                name="payer"
+                                                required
+                                                className="mt-2 block w-full rounded-lg border-purple-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm p-3 bg-white"
+                                            >
+                                                {people.map(person => (
+                                                    <option key={person.id} value={person.id}>
+                                                        {person.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-purple-700">Photo (Optional)</label>
+                                            <input
+                                                type="file"
+                                                name="photo"
+                                                accept="image/*"
+                                                className="mt-2 block w-full text-sm text-purple-700 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-purple-700 mb-3">Shared With & Amounts</label>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                {people.map(person => (
+                                                    <div key={person.id} className="flex items-center space-x-3">
+                                                        <label className="text-sm font-medium text-purple-700 w-28">{person.name}</label>
+                                                        <input
+                                                            type="number"
+                                                            name={`amount-${person.id}`}
+                                                            step="0.01"
+                                                            min="0"
+                                                            placeholder="0.00"
+                                                            className="w-24 rounded-lg border-purple-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm p-2 bg-white"
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="submit"
+                                            className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-3 rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all"
+                                        >
+                                            Add Expense
+                                        </button>
+                                    </form>
+                                </div>
+
+                                <div>
+                                    <h2 className="text-2xl font-semibold text-indigo-800 mb-6">Expenses</h2>
+                                    {expenses.length > 0 ? (
+                                        <div className="space-y-4">
+                                            {expenses.map(expense => (
+                                                <div key={expense.id} className="bg-white p-5 rounded-xl shadow-md border-l-4 border-indigo-500 flex justify-between items-start">
+                                                    <div>
+                                                        <p className="font-semibold text-indigo-800">{expense.description}</p>
+                                                        <p className="text-sm text-indigo-600">
+                                                            ${expense.totalAmount.toFixed(2)} paid by {people.find(p => p.id === expense.payerId).name}
+                                                        </p>
+                                                        <p className="text-sm text-indigo-600">
+                                                            Shared with: {expense.sharedWith.length > 0 
+                                                                ? expense.sharedWith.map(({ personId, amount }) => 
+                                                                    `${people.find(p => p.id === personId).name} ($${amount.toFixed(2)})`)
+                                                                    .join(", ")
+                                                                : "No one"}
+                                                        </p>
+                                                        {expense.photo && (
+                                                            <img src={expense.photo} alt="Receipt" className="mt-2 max-w-xs rounded-lg shadow-sm" />
+                                                        )}
+                                                    </div>
+                                                    <button
+                                                        onClick={() => removeExpense(expense.id)}
+                                                        className="text-red-600 hover:text-red-800 font-medium"
+                                                    >
+                                                        Remove
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-indigo-500">No expenses added yet.</p>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <h2 className="text-2xl font-semibold text-purple-800 mb-6">Settlements</h2>
+                                    {settlements.length > 0 ? (
+                                        <div className="space-y-3">
+                                            {settlements.map((settlement, index) => (
+                                                <p 
+                                                    key={index} 
+                                                    className={`text-sm font-medium p-3 rounded-lg ${
+                                                        settlement.type === 'owed' 
+                                                            ? 'bg-green-100 text-green-800' 
+                                                            : 'bg-red-100 text-red-800'
+                                                    }`}
+                                                >
+                                                    {settlement.text}
+                                                </p>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-purple-500">No settlements calculated yet.</p>
+                                    )}
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>

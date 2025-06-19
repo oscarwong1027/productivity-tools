@@ -1,0 +1,373 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📄 PDF Maestro</title>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.9.359/pdf.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .upload-area {
+            transition: all 0.3s ease;
+        }
+        .upload-area:hover {
+            background-color: #e5e7eb;
+            transform: scale(1.02);
+        }
+        .preview-canvas {
+            width: 595px;
+            height: 842px;
+            max-width: 100%;
+            border-radius: 8px;
+        }
+        @media (max-width: 640px) {
+            .preview-canvas {
+                width: 100%;
+                height: auto;
+            }
+        }
+        .pdf-item {
+            cursor: move;
+            transition: all 0.2s ease;
+        }
+        .pdf-item.dragging {
+            opacity: 0.7;
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            background-color: #d1d5db;
+        }
+        .pdf-item:hover {
+            background-color: #f3f4f6;
+        }
+        .order-block {
+            width: 2rem;
+            text-align: center;
+            font-weight: bold;
+            color: #374151;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-2">📄 PDF Maestro</h1>
+        <p class="text-center text-gray-600 mb-8">Upload multiple PDFs, select page ranges, reorder, merge, preview, and download</p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <div class="upload-area border-2 border-dashed border-gray-300 p-6 text-center rounded-lg cursor-pointer" id="uploadArea">
+                    <p class="text-3xl mb-2">📁</p>
+                    <p class="text-gray-700 font-medium">Click to upload PDF files</p>
+                    <p class="text-gray-500 text-sm">or drag and drop your PDFs here</p>
+                    <input type="file" id="pdfUpload" accept=".pdf" multiple class="hidden">
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">📋 PDF Information</h3>
+                <p id="pdfInfo" class="text-gray-600">No PDFs uploaded</p>
+                <p id="errorMsg" class="text-red-500 text-sm hidden">Invalid page range selected</p>
+                <div id="pdfList" class="mt-4 space-y-4"></div>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">🎯 Edit PDFs</h3>
+                <div class="space-y-4">
+                    <div class="flex gap-2">
+                        <button id="resetBtn" disabled class="flex-1 bg-gray-500 text-white py-2 rounded-md hover:bg-gray-600 transition disabled:opacity-50">🔄 Reset</button>
+                        <button id="mergeBtn" disabled class="flex-1 bg-green-600 text-white py-2 rounded-md hover:bg-green-700 transition disabled:opacity-50">🔗 Merge PDFs</button>
+                    </div>
+                    <button id="downloadBtn" disabled class="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition disabled:opacity-50">⬇️ Download PDF</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-6 bg-white p-6 rounded-lg shadow-md">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">👁️ Preview of Selected Pages</h3>
+            <canvas id="previewCanvas" class="preview-canvas border border-gray-200"></canvas>
+            <p id="previewStatus" class="text-gray-600 mt-2 text-sm">No preview available</p>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const pdfUpload = document.getElementById('pdfUpload');
+        const pdfInfo = document.getElementById('pdfInfo');
+        const pdfList = document.getElementById('pdfList');
+        const resetBtn = document.getElementById('resetBtn');
+        const mergeBtn = document.getElementById('mergeBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const previewCanvas = document.getElementById('previewCanvas');
+        const previewStatus = document.getElementById('previewStatus');
+        const errorMsg = document.getElementById('errorMsg');
+
+        let pdfDocs = [];
+        let currentPdfIndex = 0;
+
+        uploadArea.addEventListener('click', () => pdfUpload.click());
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('border-gray-500');
+        });
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('border-gray-500');
+        });
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('border-gray-500');
+            const files = Array.from(e.dataTransfer.files).filter(file => file.type === 'application/pdf');
+            if (files.length) {
+                handleFiles(files);
+            }
+        });
+
+        pdfUpload.addEventListener('change', (e) => {
+            const files = Array.from(e.target.files).filter(file => file.type === 'application/pdf');
+            if (files.length) {
+                handleFiles(files);
+            }
+        });
+
+        async function handleFiles(files) {
+            for (const file of files) {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+                pdfDocs.push({
+                    doc: pdfDoc,
+                    name: file.name,
+                    totalPages: pdfDoc.getPageCount(),
+                    fromPage: 1,
+                    toPage: pdfDoc.getPageCount()
+                });
+            }
+            updatePdfList();
+            pdfInfo.textContent = `${pdfDocs.length} PDF(s) loaded`;
+            resetBtn.disabled = false;
+            mergeBtn.disabled = pdfDocs.length < 2;
+            downloadBtn.disabled = false;
+            renderPreview(0, pdfDocs[0].fromPage);
+        }
+
+        function updatePdfList() {
+            pdfList.innerHTML = '';
+            pdfDocs.forEach((pdf, index) => {
+                const div = document.createElement('div');
+                div.className = 'pdf-item flex border p-2 rounded-md';
+                div.draggable = true;
+                div.dataset.index = index;
+                div.innerHTML = `
+                    <div class="order-block">${index + 1}.</div>
+                    <div class="flex-1">
+                        <p class="text-sm font-medium text-gray-700">${pdf.name} (${pdf.totalPages} pages)</p>
+                        <div class="flex gap-2 mt-2">
+                            <div>
+                                <label class="block text-xs text-gray-600">From:</label>
+                                <input type="number" min="1" max="${pdf.totalPages}" value="${pdf.fromPage}" class="w-16 p-1 border rounded-md from-page" data-index="${index}">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-600">To:</label>
+                                <input type="number" min="1" max="${pdf.totalPages}" value="${pdf.toPage}" class="w-16 p-1 border rounded-md to-page" data-index="${index}">
+                            </div>
+                        </div>
+                    </div>
+                `;
+                pdfList.appendChild(div);
+            });
+
+            document.querySelectorAll('.from-page, .to-page').forEach(input => {
+                input.addEventListener('change', (e) => {
+                    const index = parseInt(e.target.dataset.index);
+                    const isFrom = e.target.classList.contains('from-page');
+                    const value = parseInt(e.target.value);
+                    if (isFrom) {
+                        pdfDocs[index].fromPage = value;
+                    } else {
+                        pdfDocs[index].toPage = value;
+                    }
+                    validateRange(index);
+                });
+            });
+
+            document.querySelectorAll('.pdf-item').forEach(item => {
+                item.addEventListener('dragstart', (e) => {
+                    item.classList.add('dragging');
+                    e.dataTransfer.setData('text/plain', item.dataset.index);
+                });
+                item.addEventListener('dragend', () => {
+                    item.classList.remove('dragging');
+                });
+                item.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                });
+                item.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    const draggedIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                    const targetIndex = parseInt(item.dataset.index);
+                    if (draggedIndex !== targetIndex) {
+                        const [draggedItem] = pdfDocs.splice(draggedIndex, 1);
+                        pdfDocs.splice(targetIndex, 0, draggedItem);
+                        updatePdfList();
+                        if (currentPdfIndex === draggedIndex) {
+                            currentPdfIndex = targetIndex;
+                        } else if (currentPdfIndex === targetIndex) {
+                            currentPdfIndex = draggedIndex < targetIndex ? currentPdfIndex + 1 : currentPdfIndex - 1;
+                        }
+                        renderPreview(currentPdfIndex, pdfDocs[currentPdfIndex].fromPage);
+                    }
+                });
+            });
+
+            validateRange(currentPdfIndex);
+        }
+
+        async function renderPreview(pdfIndex, pageNum) {
+            if (!pdfDocs.length) return;
+            
+            const pdfBytes = await pdfDocs[pdfIndex].doc.save();
+            const pdfUrl = URL.createObjectURL(new Blob([pdfBytes], { type: 'application/pdf' }));
+            const pdf = await pdfjsLib.getDocument(pdfUrl).promise;
+            const page = await pdf.getPage(pageNum);
+            
+            const a4Width = 595;
+            const a4Height = 842;
+            const scale = Math.min(a4Width / page.getViewport({ scale: 1 }).width, a4Height / page.getViewport({ scale: 1 }).height);
+            const viewport = page.getViewport({ scale });
+            
+            const context = previewCanvas.getContext('2d');
+            previewCanvas.width = a4Width;
+            previewCanvas.height = a4Height;
+
+            await page.render({
+                canvasContext: context,
+                viewport: viewport
+            }).promise;
+
+            previewStatus.textContent = `Previewing page ${pageNum} of PDF ${pdfIndex + 1} (${pdfDocs[pdfIndex].name})`;
+            URL.revokeObjectURL(pdfUrl);
+        }
+
+        function validateRange(pdfIndex) {
+            const pdf = pdfDocs[pdfIndex];
+            const from = pdf.fromPage;
+            const to = pdf.toPage;
+            if (from > to || from < 1 || to > pdf.totalPages) {
+                errorMsg.classList.remove('hidden');
+                downloadBtn.disabled = true;
+            } else {
+                errorMsg.classList.add('hidden');
+                downloadBtn.disabled = false;
+                renderPreview(pdfIndex, from);
+            }
+        }
+
+        resetBtn.addEventListener('click', () => {
+            if (pdfDocs.length) {
+                pdfDocs.forEach(pdf => {
+                    pdf.fromPage = 1;
+                    pdf.toPage = pdf.totalPages;
+                });
+                currentPdfIndex = 0;
+                updatePdfList();
+                renderPreview(0, pdfDocs[0].fromPage);
+                errorMsg.classList.add('hidden');
+                downloadBtn.disabled = false;
+            } else {
+                pdfUpload.value = '';
+                pdfDocs = [];
+                currentPdfIndex = 0;
+                pdfInfo.textContent = 'No PDFs uploaded';
+                pdfList.innerHTML = '';
+                resetBtn.disabled = true;
+                mergeBtn.disabled = true;
+                downloadBtn.disabled = true;
+                previewCanvas.getContext('2d').clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+                previewStatus.textContent = 'No preview available';
+                errorMsg.classList.add('hidden');
+            }
+        });
+
+        mergeBtn.addEventListener('click', async () => {
+            if (pdfDocs.length < 2) return;
+
+            const mergedPdf = await PDFLib.PDFDocument.create();
+            for (const pdf of pdfDocs) {
+                const pageIndices = Array.from({ length: pdf.toPage - pdf.fromPage + 1 }, (_, i) => i + pdf.fromPage - 1);
+                const pages = await mergedPdf.copyPages(pdf.doc, pageIndices);
+                pages.forEach((page) => mergedPdf.addPage(page));
+            }
+
+            pdfDocs = [{
+                doc: mergedPdf,
+                name: 'Merged PDF',
+                totalPages: mergedPdf.getPageCount(),
+                fromPage: 1,
+                toPage: mergedPdf.getPageCount()
+            }];
+            currentPdfIndex = 0;
+            pdfInfo.textContent = `Merged PDF: ${pdfDocs[0].totalPages} pages`;
+            updatePdfList();
+            mergeBtn.disabled = true;
+            renderPreview(0, 1);
+        });
+
+        downloadBtn.addEventListener('click', async () => {
+            if (!pdfDocs.length) return;
+
+            const mergedPdf = await PDFLib.PDFDocument.create();
+            for (const pdf of pdfDocs) {
+                const pageIndices = Array.from({ length: pdf.toPage - pdf.fromPage + 1 }, (_, i) => i + pdf.fromPage - 1);
+                const pages = await mergedPdf.copyPages(pdf.doc, pageIndices);
+                pages.forEach((page) => mergedPdf.addPage(page));
+            }
+
+            const pdfBytes = await mergedPdf.save();
+            const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'edited_pdf.pdf';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+    </script>
+</body>
+</html>
