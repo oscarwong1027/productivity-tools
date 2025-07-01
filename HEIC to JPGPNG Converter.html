@@ -1,0 +1,251 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HEIC to JPG/PNG Converter</title>
+    <script src="https://unpkg.com/heic2any@0.0.4/dist/heic2any.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            margin: 0;
+            padding: 40px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e7eb 100%);
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            padding: 32px;
+            animation: fadeIn 0.5s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 24px;
+            text-align: center;
+            color: #1a1a1a;
+        }
+        #dropZone {
+            width: 100%;
+            height: 200px;
+            border: 2px dashed #d1d5db;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background: #fafafa;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            font-size: 18px;
+            color: #6b7280;
+        }
+        #dropZone:hover, #dropZone.dragover {
+            background: #e5e7eb;
+            border-color: #3b82f6;
+            color: #3b82f6;
+        }
+        .controls {
+            display: flex;
+            gap: 16px;
+            margin: 24px 0;
+            justify-content: center;
+        }
+        select, button {
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        select {
+            background: #f3f4f6;
+            color: #374151;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            font-weight: 600;
+        }
+        button:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        #output {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 24px;
+            margin-top: 32px;
+        }
+        .image-container {
+            background: #f9fafb;
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+        .image-container:hover {
+            transform: scale(1.05);
+        }
+        img {
+            max-width: 100%;
+            max-height: 150px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+        a {
+            color: #3b82f6;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>HEIC to JPG/PNG Converter</h1>
+        <div id="dropZone">Drop HEIC files here or click to upload</div>
+        <input type="file" id="fileInput" accept=".heic" style="display: none;" multiple>
+        <div class="controls">
+            <select id="formatSelect">
+                <option value="jpeg">JPG</option>
+                <option value="png">PNG</option>
+            </select>
+            <button onclick="convertFiles()">Convert</button>
+        </div>
+        <div id="output"></div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const formatSelect = document.getElementById('formatSelect');
+        const output = document.getElementById('output');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            fileInput.files = e.dataTransfer.files;
+            updateDropZoneText();
+        });
+
+        fileInput.addEventListener('change', updateDropZoneText);
+
+        function updateDropZoneText() {
+            const fileCount = fileInput.files.length;
+            dropZone.textContent = fileCount > 0 ? `${fileCount} file(s) selected` : 'Drop HEIC files here or click to upload';
+        }
+
+        async function convertFiles() {
+            output.innerHTML = '';
+            const files = fileInput.files;
+            if (!files.length) {
+                alert('Please select HEIC files to convert.');
+                return;
+            }
+
+            const targetFormat = formatSelect.value;
+
+            for (const file of files) {
+                if (file.name.toLowerCase().endsWith('.heic')) {
+                    try {
+                        const blob = await heic2any({
+                            blob: file,
+                            toType: `image/${targetFormat}`,
+                            quality: 0.8
+                        });
+
+                        const url = URL.createObjectURL(blob);
+                        const img = document.createElement('img');
+                        img.src = url;
+
+                        const downloadLink = document.createElement('a');
+                        downloadLink.href = url;
+                        downloadLink.download = file.name.replace(/\.heic$/i, `.${targetFormat}`);
+                        downloadLink.textContent = `Download ${targetFormat.toUpperCase()}`;
+
+                        const container = document.createElement('div');
+                        container.className = 'image-container';
+                        container.appendChild(img);
+                        container.appendChild(downloadLink);
+
+                        output.appendChild(container);
+                    } catch (error) {
+                        console.error('Conversion error:', error);
+                        alert(`Error converting ${file.name}`);
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
