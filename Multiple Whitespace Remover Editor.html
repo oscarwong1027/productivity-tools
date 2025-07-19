@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiple Whitespace Remover</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 30px;
+        }
+
+        .controls {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border: 1px solid #e9ecef;
+        }
+
+        .controls h3 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .control-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #4facfe;
+        }
+
+        .checkbox-group label {
+            font-size: 0.95rem;
+            color: #495057;
+            cursor: pointer;
+        }
+
+        .replacement-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .replacement-group select,
+        .replacement-group input {
+            padding: 8px 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .replacement-group select:focus,
+        .replacement-group input:focus {
+            outline: none;
+            border-color: #4facfe;
+        }
+
+        .editor-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .input-section,
+        .output-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .section-header h3 {
+            color: #495057;
+            font-size: 1.1rem;
+        }
+
+        .char-count {
+            font-size: 0.85rem;
+            color: #6c757d;
+            background: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 300px;
+            padding: 15px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+            background: white;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #4facfe;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(79, 172, 254, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .stats {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .help-section {
+            background: #e3f2fd;
+            border: 1px solid #bbdefb;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .help-section h4 {
+            color: #1976d2;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .help-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .help-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #e3f2fd;
+            color: #424242;
+        }
+
+        .help-list li:last-child {
+            border-bottom: none;
+        }
+
+        .help-list li::before {
+            content: "💡 ";
+            margin-right: 8px;
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.8rem;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .header p {
+                font-size: 1rem;
+            }
+
+            .main-content {
+                padding: 20px;
+            }
+
+            .editor-section {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .control-group {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+
+            .button-group {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .btn {
+                width: 100%;
+                max-width: 300px;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+
+            .header {
+                padding: 20px;
+            }
+
+            .main-content {
+                padding: 15px;
+            }
+
+            .controls {
+                padding: 15px;
+            }
+
+            textarea {
+                height: 200px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Multiple Whitespace Remover</h1>
+            <p>Clean up your text by removing extra spaces, tabs, and line breaks</p>
+        </div>
+
+        <div class="main-content">
+            <div class="controls">
+                <h3>Cleaning Options</h3>
+                <div class="control-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="trimWhitespace" checked>
+                        <label for="trimWhitespace" class="tooltip">
+                            Remove leading/trailing whitespace
+                            <span class="tooltiptext">Removes spaces at the beginning and end of the text</span>
+                        </label>
+                    </div>
+
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="multipleSpaces" checked>
+                        <label for="multipleSpaces" class="tooltip">
+                            Replace multiple spaces
+                            <span class="tooltiptext">Converts multiple consecutive spaces into single spaces</span>
+                        </label>
+                    </div>
+
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="multipleTabs" checked>
+                        <label for="multipleTabs" class="tooltip">
+                            Remove multiple tabs
+                            <span class="tooltiptext">Converts tabs to spaces and removes extras</span>
+                        </label>
+                    </div>
+
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="multipleLineBreaks" checked>
+                        <label for="multipleLineBreaks" class="tooltip">
+                            Remove multiple line breaks
+                            <span class="tooltiptext">Reduces multiple empty lines to single line breaks</span>
+                        </label>
+                    </div>
+
+                    <div class="replacement-group">
+                        <label for="replacementType">Replace with:</label>
+                        <select id="replacementType">
+                            <option value="space">Single Space</option>
+                            <option value="hyphen">Hyphen (-)</option>
+                            <option value="underscore">Underscore (_)</option>
+                            <option value="custom">Custom Character</option>
+                        </select>
+                        <input type="text" id="customReplacement" placeholder="Enter custom character" maxlength="5" style="display: none;">
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats">
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="originalChars">0</div>
+                        <div class="stat-label">Original Characters</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="cleanedChars">0</div>
+                        <div class="stat-label">Cleaned Characters</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="spacesRemoved">0</div>
+                        <div class="stat-label">Spaces Removed</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="reductionPercent">0%</div>
+                        <div class="stat-label">Reduction</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="editor-section">
+                <div class="input-section">
+                    <div class="section-header">
+                        <h3>Input Text</h3>
+                        <span class="char-count" id="inputCount">0 characters</span>
+                    </div>
+                    <textarea id="inputText" placeholder="Paste or type your text here with multiple spaces, tabs, and line breaks...
+
+For example:
+This    text     has     multiple    spaces.
+And        tabs        and        extra        whitespace.
+
+
+It also has multiple line breaks.
+
+
+
+Clean it up using the options above!"></textarea>
+                </div>
+
+                <div class="output-section">
+                    <div class="section-header">
+                        <h3>Cleaned Text</h3>
+                        <span class="char-count" id="outputCount">0 characters</span>
+                    </div>
+                    <textarea id="outputText" readonly placeholder="Your cleaned text will appear here..."></textarea>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="processText()">Clean Whitespace</button>
+                <button class="btn btn-secondary" onclick="clearAll()">Clear All</button>
+                <button class="btn btn-success" onclick="copyToClipboard()">Copy Result</button>
+            </div>
+
+            <div class="help-section">
+                <h4>How to Use This Tool</h4>
+                <ul class="help-list">
+                    <li>Paste or type your text in the input area</li>
+                    <li>Choose your cleaning options using the checkboxes above</li>
+                    <li>Select what to replace multiple spaces with</li>
+                    <li>The text is cleaned automatically as you type, or click "Clean Whitespace"</li>
+                    <li>Use "Copy Result" to copy the cleaned text to your clipboard</li>
+                    <li>The statistics show how much whitespace was removed</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let debounceTimer;
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputText = document.getElementById('inputText');
+            const replacementType = document.getElementById('replacementType');
+            const customReplacement = document.getElementById('customReplacement');
+
+            // Add event listeners for real-time updates
+            inputText.addEventListener('input', function() {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(processText, 300);
+            });
+
+            // Add event listeners for all controls
+            document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                checkbox.addEventListener('change', processText);
+            });
+
+            replacementType.addEventListener('change', function() {
+                if (this.value === 'custom') {
+                    customReplacement.style.display = 'inline-block';
+                } else {
+                    customReplacement.style.display = 'none';
+                }
+                processText();
+            });
+
+            customReplacement.addEventListener('input', processText);
+
+            // Initial processing
+            processText();
+        });
+
+        function processText() {
+            const inputText = document.getElementById('inputText').value;
+            const outputText = document.getElementById('outputText');
+            
+            // Get options
+            const trimWhitespace = document.getElementById('trimWhitespace').checked;
+            const multipleSpaces = document.getElementById('multipleSpaces').checked;
+            const multipleTabs = document.getElementById('multipleTabs').checked;
+            const multipleLineBreaks = document.getElementById('multipleLineBreaks').checked;
+            const replacementType = document.getElementById('replacementType').value;
+            const customReplacement = document.getElementById('customReplacement').value;
+
+            let cleanedText = inputText;
+            let originalLength = inputText.length;
+
+            // Get replacement character
+            let replacement = ' ';
+            switch (replacementType) {
+                case 'hyphen':
+                    replacement = '-';
+                    break;
+                case 'underscore':
+                    replacement = '_';
+                    break;
+                case 'custom':
+                    replacement = customReplacement || ' ';
+                    break;
+                default:
+                    replacement = ' ';
+            }
+
+            // Process tabs first
+            if (multipleTabs) {
+                cleanedText = cleanedText.replace(/\t+/g, ' ');
+            }
+
+            // Process multiple spaces
+            if (multipleSpaces) {
+                cleanedText = cleanedText.replace(/[ ]+/g, replacement);
+            }
+
+            // Process multiple line breaks
+            if (multipleLineBreaks) {
+                cleanedText = cleanedText.replace(/\n\s*\n\s*\n+/g, '\n\n');
+            }
+
+            // Trim whitespace
+            if (trimWhitespace) {
+                cleanedText = cleanedText.trim();
+            }
+
+            // Update output
+            outputText.value = cleanedText;
+
+            // Update statistics
+            updateStatistics(originalLength, cleanedText.length);
+            updateCharCounts(inputText, cleanedText);
+        }
+
+        function updateStatistics(originalLength, cleanedLength) {
+            const spacesRemoved = originalLength - cleanedLength;
+            const reductionPercent = originalLength > 0 ? Math.round((spacesRemoved / originalLength) * 100) : 0;
+
+            document.getElementById('originalChars').textContent = originalLength.toLocaleString();
+            document.getElementById('cleanedChars').textContent = cleanedLength.toLocaleString();
+            document.getElementById('spacesRemoved').textContent = spacesRemoved.toLocaleString();
+            document.getElementById('reductionPercent').textContent = reductionPercent + '%';
+        }
+
+        function updateCharCounts(inputText, outputText) {
+            document.getElementById('inputCount').textContent = inputText.length.toLocaleString() + ' characters';
+            document.getElementById('outputCount').textContent = outputText.length.toLocaleString() + ' characters';
+        }
+
+        function clearAll() {
+            document.getElementById('inputText').value = '';
+            document.getElementById('outputText').value = '';
+            updateStatistics(0, 0);
+            updateCharCounts('', '');
+        }
+
+        async function copyToClipboard() {
+            const outputText = document.getElementById('outputText');
+            
+            if (outputText.value.trim() === '') {
+                alert('No text to copy! Please process some text first.');
+                return;
+            }
+
+            try {
+                await navigator.clipboard.writeText(outputText.value);
+                
+                // Visual feedback
+                const button = event.target;
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                button.style.background = '#28a745';
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.background = '';
+                }, 2000);
+            } catch (err) {
+                // Fallback for older browsers
+                outputText.select();
+                outputText.setSelectionRange(0, 99999);
+                document.execCommand('copy');
+                alert('Text copied to clipboard!');
+            }
+        }
+    </script>
+</body>
+</html>

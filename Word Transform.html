@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Analyzer & Transformer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 30px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            background: #f9f9f9;
+        }
+
+        .section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.4em;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 150px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            font-family: inherit;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #4facfe;
+        }
+
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .transformation-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            color: #667eea;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .stat-card p {
+            color: #666;
+            font-weight: 600;
+        }
+
+        .output-text {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            min-height: 150px;
+            font-size: 16px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .frequent-words {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .word-tag {
+            background: #667eea;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .help-section {
+            background: #e8f4f8;
+            border-left: 4px solid #4facfe;
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 12px;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .real-time-counter {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            min-width: 200px;
+        }
+
+        .real-time-counter h4 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .counter-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+            }
+            
+            .main-content {
+                padding: 20px;
+            }
+            
+            .real-time-counter {
+                position: static;
+                margin-bottom: 20px;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Text Analyzer & Transformer</h1>
+            <p>Parse, analyze, and transform your text with powerful tools</p>
+        </div>
+
+        <div class="main-content">
+            <!-- Real-time Counter -->
+            <div class="real-time-counter">
+                <h4>Live Statistics</h4>
+                <div class="counter-item">
+                    <span>Characters:</span>
+                    <span id="liveCharCount">0</span>
+                </div>
+                <div class="counter-item">
+                    <span>Words:</span>
+                    <span id="liveWordCount">0</span>
+                </div>
+                <div class="counter-item">
+                    <span>Sentences:</span>
+                    <span id="liveSentenceCount">0</span>
+                </div>
+                <div class="counter-item">
+                    <span>Paragraphs:</span>
+                    <span id="liveParagraphCount">0</span>
+                </div>
+            </div>
+
+            <!-- Input Section -->
+            <div class="section">
+                <h2>📝 Text Input</h2>
+                <div class="input-group">
+                    <label for="inputText">Enter your text or generate random text:</label>
+                    <textarea id="inputText" placeholder="Type your text here or click 'Generate Random Text' to get started..."></textarea>
+                </div>
+                <div class="button-group">
+                    <button class="btn-primary tooltip" onclick="generateRandomText()">
+                        🎲 Generate Random Text
+                        <span class="tooltiptext">Generate sample text for testing</span>
+                    </button>
+                    <button class="btn-secondary tooltip" onclick="clearText()">
+                        🗑️ Clear Text
+                        <span class="tooltiptext">Clear all text from input</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Transformation Section -->
+            <div class="section">
+                <h2>🔄 Text Transformations</h2>
+                <div class="transformation-buttons">
+                    <button class="btn-primary tooltip" onclick="transformText('capitalize-words')">
+                        📝 Capitalize Each Word
+                        <span class="tooltiptext">Make the first letter of each word uppercase</span>
+                    </button>
+                    <button class="btn-primary tooltip" onclick="transformText('capitalize-sentences')">
+                        📄 Capitalize Sentences
+                        <span class="tooltiptext">Capitalize the first letter of each sentence</span>
+                    </button>
+                    <button class="btn-primary tooltip" onclick="transformText('capitalize-paragraphs')">
+                        📋 Capitalize Paragraphs
+                        <span class="tooltiptext">Capitalize the first letter of each paragraph</span>
+                    </button>
+                    <button class="btn-primary tooltip" onclick="transformText('lowercase')">
+                        🔤 Convert to Lowercase
+                        <span class="tooltiptext">Convert all text to lowercase</span>
+                    </button>
+                    <button class="btn-primary tooltip" onclick="transformText('uppercase')">
+                        🔠 Convert to Uppercase
+                        <span class="tooltiptext">Convert all text to uppercase</span>
+                    </button>
+                    <button class="btn-primary tooltip" onclick="transformText('reverse')">
+                        🔄 Reverse Text
+                        <span class="tooltiptext">Reverse the entire text</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Output Section -->
+            <div class="section">
+                <h2>📤 Transformed Text</h2>
+                <div id="outputText" class="output-text">Your transformed text will appear here...</div>
+            </div>
+
+            <!-- Statistics Section -->
+            <div class="section">
+                <h2>📊 Text Statistics</h2>
+                <button class="btn-primary" onclick="analyzeText()">🔍 Analyze Text</button>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3 id="charCount">0</h3>
+                        <p>Characters</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="wordCount">0</h3>
+                        <p>Words</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="sentenceCount">0</h3>
+                        <p>Sentences</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="paragraphCount">0</h3>
+                        <p>Paragraphs</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="avgWordLength">0</h3>
+                        <p>Avg Word Length</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="readingTime">0</h3>
+                        <p>Reading Time (min)</p>
+                    </div>
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <h3>Most Frequent Words:</h3>
+                    <div id="frequentWords" class="frequent-words"></div>
+                </div>
+            </div>
+
+            <!-- Help Section -->
+            <div class="section help-section">
+                <h2>❓ How to Use</h2>
+                <ul style="line-height: 1.8; margin-left: 20px;">
+                    <li><strong>Text Input:</strong> Type or paste your text in the input area, or generate random text for testing.</li>
+                    <li><strong>Real-time Updates:</strong> Watch the live statistics update as you type.</li>
+                    <li><strong>Transformations:</strong> Use the transformation buttons to modify your text format.</li>
+                    <li><strong>Analysis:</strong> Click "Analyze Text" to get detailed statistics about your text.</li>
+                    <li><strong>Tooltips:</strong> Hover over buttons to see helpful descriptions.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample texts for random generation
+        const sampleTexts = [
+            "The quick brown fox jumps over the lazy dog. This pangram contains every letter of the alphabet at least once. It's commonly used for testing fonts and keyboards.",
+            "In a hole in the ground there lived a hobbit. Not a nasty, dirty, wet hole, filled with the ends of worms and an oozy smell, nor yet a dry, bare, sandy hole with nothing in it to sit down on or to eat: it was a hobbit-hole, and that means comfort.",
+            "To be or not to be, that is the question. Whether 'tis nobler in the mind to suffer the slings and arrows of outrageous fortune, or to take arms against a sea of troubles and by opposing end them.",
+            "It was the best of times, it was the worst of times, it was the age of wisdom, it was the age of foolishness, it was the epoch of belief, it was the epoch of incredulity, it was the season of Light, it was the season of Darkness.",
+            "Space: the final frontier. These are the voyages of the starship Enterprise. Its five-year mission: to explore strange new worlds, to seek out new life and new civilizations, to boldly go where no man has gone before."
+        ];
+
+        // Get DOM elements
+        const inputText = document.getElementById('inputText');
+        const outputText = document.getElementById('outputText');
+
+        // Real-time counter updates
+        inputText.addEventListener('input', updateLiveCounters);
+
+        function updateLiveCounters() {
+            const text = inputText.value;
+            
+            document.getElementById('liveCharCount').textContent = text.length;
+            document.getElementById('liveWordCount').textContent = countWords(text);
+            document.getElementById('liveSentenceCount').textContent = countSentences(text);
+            document.getElementById('liveParagraphCount').textContent = countParagraphs(text);
+        }
+
+        function generateRandomText() {
+            const randomIndex = Math.floor(Math.random() * sampleTexts.length);
+            inputText.value = sampleTexts[randomIndex];
+            updateLiveCounters();
+            outputText.textContent = "Random text generated! Use transformation buttons to modify it.";
+        }
+
+        function clearText() {
+            inputText.value = '';
+            outputText.textContent = 'Your transformed text will appear here...';
+            updateLiveCounters();
+            clearStats();
+        }
+
+        function transformText(type) {
+            const text = inputText.value;
+            if (!text.trim()) {
+                alert('Please enter some text first!');
+                return;
+            }
+
+            let transformedText = '';
+
+            switch(type) {
+                case 'capitalize-words':
+                    transformedText = text.replace(/\b\w/g, char => char.toUpperCase());
+                    break;
+                case 'capitalize-sentences':
+                    transformedText = text.replace(/(^\w|[.!?]\s*\w)/g, char => char.toUpperCase());
+                    break;
+                case 'capitalize-paragraphs':
+                    transformedText = text.replace(/(^\w|\n\s*\w)/g, char => char.toUpperCase());
+                    break;
+                case 'lowercase':
+                    transformedText = text.toLowerCase();
+                    break;
+                case 'uppercase':
+                    transformedText = text.toUpperCase();
+                    break;
+                case 'reverse':
+                    transformedText = text.split('').reverse().join('');
+                    break;
+                default:
+                    transformedText = text;
+            }
+
+            outputText.textContent = transformedText;
+        }
+
+        function countWords(text) {
+            if (!text.trim()) return 0;
+            return text.trim().split(/\s+/).length;
+        }
+
+        function countSentences(text) {
+            if (!text.trim()) return 0;
+            return text.split(/[.!?]+/).filter(s => s.trim().length > 0).length;
+        }
+
+        function countParagraphs(text) {
+            if (!text.trim()) return 0;
+            return text.split(/\n\s*\n/).filter(p => p.trim().length > 0).length;
+        }
+
+        function analyzeText() {
+            const text = inputText.value;
+            if (!text.trim()) {
+                alert('Please enter some text to analyze!');
+                return;
+            }
+
+            // Basic counts
+            const charCount = text.length;
+            const wordCount = countWords(text);
+            const sentenceCount = countSentences(text);
+            const paragraphCount = countParagraphs(text);
+
+            // Average word length
+            const words = text.trim().split(/\s+/).filter(word => word.length > 0);
+            const avgWordLength = words.length > 0 ? 
+                (words.reduce((sum, word) => sum + word.replace(/[^\w]/g, '').length, 0) / words.length).toFixed(1) : 0;
+
+            // Reading time (average 200 words per minute)
+            const readingTime = Math.ceil(wordCount / 200);
+
+            // Update display
+            document.getElementById('charCount').textContent = charCount;
+            document.getElementById('wordCount').textContent = wordCount;
+            document.getElementById('sentenceCount').textContent = sentenceCount;
+            document.getElementById('paragraphCount').textContent = paragraphCount;
+            document.getElementById('avgWordLength').textContent = avgWordLength;
+            document.getElementById('readingTime').textContent = readingTime;
+
+            // Most frequent words
+            displayFrequentWords(text);
+        }
+
+        function displayFrequentWords(text) {
+            const words = text.toLowerCase()
+                .replace(/[^\w\s]/g, '')
+                .split(/\s+/)
+                .filter(word => word.length > 2); // Filter out short words
+
+            const wordCount = {};
+            words.forEach(word => {
+                wordCount[word] = (wordCount[word] || 0) + 1;
+            });
+
+            const sortedWords = Object.entries(wordCount)
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, 10); // Top 10 words
+
+            const frequentWordsDiv = document.getElementById('frequentWords');
+            frequentWordsDiv.innerHTML = '';
+
+            if (sortedWords.length === 0) {
+                frequentWordsDiv.innerHTML = '<span class="word-tag">No words found</span>';
+                return;
+            }
+
+            sortedWords.forEach(([word, count]) => {
+                const wordTag = document.createElement('span');
+                wordTag.className = 'word-tag';
+                wordTag.textContent = `${word} (${count})`;
+                frequentWordsDiv.appendChild(wordTag);
+            });
+        }
+
+        function clearStats() {
+            document.getElementById('charCount').textContent = '0';
+            document.getElementById('wordCount').textContent = '0';
+            document.getElementById('sentenceCount').textContent = '0';
+            document.getElementById('paragraphCount').textContent = '0';
+            document.getElementById('avgWordLength').textContent = '0';
+            document.getElementById('readingTime').textContent = '0';
+            document.getElementById('frequentWords').innerHTML = '';
+        }
+
+        // Initialize live counters
+        updateLiveCounters();
+    </script>
+</body>
+</html>
