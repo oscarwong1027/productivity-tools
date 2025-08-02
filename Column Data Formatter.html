@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Column Data Formatter</title>
+  <style>
+      * {
+          box-sizing: border-box;
+      }
+      
+      body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          max-width: 1400px;
+          margin: 0 auto;
+          padding: 20px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          min-height: 100vh;
+      }
+      
+      .container {
+          background: white;
+          border-radius: 16px;
+          padding: 40px;
+          box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+          backdrop-filter: blur(10px);
+      }
+      
+      h1 {
+          color: #2c3e50;
+          text-align: center;
+          margin-bottom: 10px;
+          font-size: 2.5em;
+          font-weight: 700;
+      }
+      
+      .subtitle {
+          text-align: center;
+          color: #7f8c8d;
+          margin-bottom: 30px;
+          font-size: 1.1em;
+      }
+      
+      .section {
+          margin-bottom: 30px;
+      }
+      
+      label {
+          display: block;
+          margin-bottom: 10px;
+          font-weight: 600;
+          color: #34495e;
+          font-size: 1.1em;
+      }
+      
+      textarea {
+          width: 100%;
+          padding: 16px;
+          border: 2px solid #e1e8ed;
+          border-radius: 12px;
+          font-family: 'Consolas', 'Monaco', monospace;
+          font-size: 14px;
+          resize: vertical;
+          transition: all 0.3s ease;
+          line-height: 1.5;
+      }
+      
+      textarea:focus {
+          outline: none;
+          border-color: #3498db;
+          box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+      }
+      
+      .input-area {
+          height: 250px;
+          background: #fafbfc;
+      }
+      
+      .output-area {
+          height: 180px;
+          background-color: #f8f9fa;
+          border-color: #28a745;
+      }
+      
+      .buttons {
+          text-align: center;
+          margin: 30px 0;
+          display: flex;
+          gap: 15px;
+          justify-content: center;
+          flex-wrap: wrap;
+      }
+      
+      button {
+          padding: 14px 28px;
+          border: none;
+          border-radius: 10px;
+          cursor: pointer;
+          font-size: 16px;
+          font-weight: 600;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          min-width: 140px;
+          justify-content: center;
+      }
+      
+      .format-btn {
+          background: linear-gradient(135deg, #4CAF50, #45a049);
+          color: white;
+          box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+      }
+      
+      .format-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+      }
+      
+      .copy-btn {
+          background: linear-gradient(135deg, #2196F3, #1976D2);
+          color: white;
+          box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+      }
+      
+      .copy-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
+      }
+      
+      .clear-btn {
+          background: linear-gradient(135deg, #f44336, #d32f2f);
+          color: white;
+          box-shadow: 0 4px 15px rgba(244, 67, 54, 0.3);
+      }
+      
+      .clear-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(244, 67, 54, 0.4);
+      }
+      
+      button:active {
+          transform: translateY(0);
+      }
+      
+      .info {
+          background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+          padding: 20px;
+          border-radius: 12px;
+          margin-bottom: 25px;
+          border-left: 5px solid #2196F3;
+      }
+      
+      .info h3 {
+          margin-top: 0;
+          color: #1565C0;
+          font-size: 1.2em;
+      }
+      
+      .info p {
+          margin: 8px 0;
+          color: #1976D2;
+      }
+      
+      .stats {
+          background: linear-gradient(135deg, #f0f2f5, #e1e8ed);
+          padding: 12px 16px;
+          border-radius: 8px;
+          margin-top: 12px;
+          font-size: 14px;
+          color: #495057;
+          font-weight: 500;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+      }
+      
+      .limit-warning {
+          color: #e74c3c;
+          font-weight: 600;
+      }
+      
+      .limit-ok {
+          color: #27ae60;
+          font-weight: 600;
+      }
+      
+      .notification {
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: linear-gradient(135deg, #4CAF50, #45a049);
+          color: white;
+          padding: 16px 24px;
+          border-radius: 10px;
+          display: none;
+          z-index: 1000;
+          box-shadow: 0 4px 20px rgba(76, 175, 80, 0.3);
+          font-weight: 600;
+      }
+      
+      .grid-layout {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 30px;
+          margin-top: 20px;
+      }
+      
+      @media (max-width: 768px) {
+          .grid-layout {
+              grid-template-columns: 1fr;
+          }
+          
+          .buttons {
+              flex-direction: column;
+              align-items: center;
+          }
+          
+          button {
+              width: 100%;
+              max-width: 300px;
+          }
+      }
+      
+      .example-box {
+          background: #f8f9fa;
+          border: 2px dashed #dee2e6;
+          border-radius: 8px;
+          padding: 15px;
+          margin-top: 10px;
+          font-family: monospace;
+          font-size: 13px;
+          color: #6c757d;
+      }
+  </style>
+</head>
+<body>
+  <div class="container">
+      <h1>📊 Column Data Formatter</h1>
+      <p class="subtitle">Transform your Excel columns into formatted strings instantly</p>
+      
+      <div class="info">
+          <h3>🚀 How to use:</h3>
+          <p>1. Copy a column of data from Excel (or any spreadsheet)</p>
+          <p>2. Paste it in the input area below (max 1000 items)</p>
+          <p>3. Click "Format Data" to convert it to quoted string format</p>
+          <p>4. Copy the result from the output area</p>
+      </div>
+      
+      <div class="grid-layout">
+          <div class="section">
+              <label for="input">📥 Input Data (paste your column here):</label>
+              <textarea id="input" class="input-area" placeholder="Paste your column data here...
+
+Example:
+apple
+banana
+cherry
+orange"></textarea>
+              <div class="stats" id="inputStats">
+                  <span>Ready to process data...</span>
+                  <span class="limit-ok">0/1000 items</span>
+              </div>
+              <div class="example-box">
+                  Expected input format:<br>
+                  item1<br>
+                  item2<br>
+                  item3
+              </div>
+          </div>
+          
+          <div class="section">
+              <label for="output">📤 Formatted Output:</label>
+              <textarea id="output" class="output-area" readonly placeholder="Formatted data will appear here...
+
+Example output:
+'apple, banana, cherry, orange'"></textarea>
+              <div class="stats" id="outputStats">
+                  <span>No output yet...</span>
+                  <span>0 characters</span>
+              </div>
+              <div class="example-box">
+                  Output format:<br>
+                  'item1, item2, item3'
+              </div>
+          </div>
+      </div>
+      
+      <div class="buttons">
+          <button class="format-btn" onclick="formatData()">
+              <span>🔄</span> Format Data
+          </button>
+          <button class="copy-btn" onclick="copyOutput()">
+              <span>📋</span> Copy Output
+          </button>
+          <button class="clear-btn" onclick="clearAll()">
+              <span>🗑️</span> Clear All
+          </button>
+      </div>
+  </div>
+  
+  <div class="notification" id="notification">✅ Copied to clipboard!</div>
+  
+  <script>
+      const MAX_ITEMS = 1000;
+      
+      function formatData() {
+          const input = document.getElementById('input').value;
+          const output = document.getElementById('output');
+          const inputStats = document.getElementById('inputStats');
+          const outputStats = document.getElementById('outputStats');
+          
+          if (!input.trim()) {
+              alert('Please enter some data first!');
+              return;
+          }
+          
+          // Split by lines and filter out empty lines
+          const lines = input.split('\n')
+              .map(line => line.trim())
+              .filter(line => line.length > 0);
+          
+          if (lines.length === 0) {
+              alert('No valid data found!');
+              return;
+          }
+          
+          // Check item limit
+          if (lines.length > MAX_ITEMS) {
+              alert(`Too many items! Please limit to ${MAX_ITEMS} items. You have ${lines.length} items.`);
+              return;
+          }
+          
+          // Format as 'item1, item2, item3' (single quotes around the entire string)
+          const formatted = `'${lines.join(', ')}'`;
+          
+          output.value = formatted;
+          
+          // Update statistics
+          updateInputStats(lines.length);
+          outputStats.innerHTML = `
+              <span>Output ready: ${lines.length} items formatted</span>
+              <span>${formatted.length} characters</span>
+          `;
+      }
+      
+      function copyOutput() {
+          const output = document.getElementById('output');
+          
+          if (!output.value) {
+              alert('No output to copy! Please format some data first.');
+              return;
+          }
+          
+          output.select();
+          document.execCommand('copy');
+          
+          // Show notification
+          const notification = document.getElementById('notification');
+          notification.style.display = 'block';
+          setTimeout(() => {
+              notification.style.display = 'none';
+          }, 2500);
+      }
+      
+      function clearAll() {
+          if (confirm('Are you sure you want to clear all data?')) {
+              document.getElementById('input').value = '';
+              document.getElementById('output').value = '';
+              document.getElementById('inputStats').innerHTML = `
+                  <span>Ready to process data...</span>
+                  <span class="limit-ok">0/1000 items</span>
+              `;
+              document.getElementById('outputStats').innerHTML = `
+                  <span>No output yet...</span>
+                  <span>0 characters</span>
+              `;
+          }
+      }
+      
+      function updateInputStats(itemCount) {
+          const inputStats = document.getElementById('inputStats');
+          const limitClass = itemCount > MAX_ITEMS ? 'limit-warning' : 'limit-ok';
+          const limitText = itemCount > MAX_ITEMS ? `⚠️ ${itemCount}/${MAX_ITEMS} items (EXCEEDED)` : `${itemCount}/${MAX_ITEMS} items`;
+          
+          inputStats.innerHTML = `
+              <span>Input: ${itemCount} items ready to format</span>
+              <span class="${limitClass}">${limitText}</span>
+          `;
+      }
+      
+      // Auto-update input statistics
+      document.getElementById('input').addEventListener('input', function() {
+          const input = this.value;
+          
+          if (input.trim()) {
+              const lines = input.split('\n')
+                  .map(line => line.trim())
+                  .filter(line => line.length > 0);
+              updateInputStats(lines.length);
+          } else {
+              document.getElementById('inputStats').innerHTML = `
+                  <span>Ready to process data...</span>
+                  <span class="limit-ok">0/1000 items</span>
+              `;
+          }
+      });
+      
+      // Allow Ctrl+Enter to format data
+      document.getElementById('input').addEventListener('keydown', function(e) {
+          if (e.ctrlKey && e.key === 'Enter') {
+              formatData();
+          }
+      });
+      
+      // Prevent pasting too much data
+      document.getElementById('input').addEventListener('paste', function(e) {
+          setTimeout(() => {
+              const lines = this.value.split('\n')
+                  .map(line => line.trim())
+                  .filter(line => line.length > 0);
+              
+              if (lines.length > MAX_ITEMS) {
+                  if (confirm(`You're trying to paste ${lines.length} items, but the limit is ${MAX_ITEMS}. Do you want to keep only the first ${MAX_ITEMS} items?`)) {
+                      const truncatedLines = lines.slice(0, MAX_ITEMS);
+                      this.value = truncatedLines.join('\n');
+                      updateInputStats(MAX_ITEMS);
+                  }
+              }
+          }, 10);
+      });
+  </script>
+</body>
+</html>
