@@ -1,49 +1,41 @@
 # AI-Powered Tools Collection
 
-Welcome to the **AI-Powered Tools Collection**, a curated set of intelligent web tools designed to enhance productivity and convenience through automation and smart features.
+A collection of 11 web-based productivity tools designed to enhance your workflow and daily tasks.
 
-## Overview
+## 🛠️ Tools Included
 
-This project is a single-page web application that serves as a hub for multiple AI-enhanced productivity tools. Each tool is accessible via a clean, user-friendly interface with responsive design and smooth interactions.
+1. **Advanced PDF Editor** - Upload, edit, merge, and reorder PDF pages
+2. **HEIC to JPG/PNG Converter** - Convert Apple HEIC images to standard formats
+3. **Smart Expense Splitter v4** - Split group expenses fairly with detailed breakdowns
+4. **Time Zone Converter** - Convert times across different time zones
+5. **Advanced Color Palette Generator v2** - Create color palettes for design projects
+6. **Weather Dashboard v2** - Real-time weather information and forecasts
+7. **Currency Converter** - Convert currencies with live exchange rates
+8. **JSON Tree Viewer** - Visualize JSON data in an interactive tree format
+9. **Multiple Whitespace Remover** - Clean up text formatting issues
+10. **Word Transform** - Transform text with various formatting options
+11. **Column Data Formatter** - Format and organize column-based data
 
-## Features
+## 🚀 Features
 
-- **Advanced PDF Editor**  
-  Upload multiple PDFs, select page ranges, reorder pages, merge documents, preview, and download the final PDF.
+- **No installation required** - Works directly in your browser
+- **Mobile-friendly** - Responsive design for all devices
+- **Privacy-focused** - All processing happens locally
+- **Fast and lightweight** - Optimized for performance
 
-- **HEIC to JPG/PNG Converter**  
-  Convert Apple's HEIC image format to widely supported JPG and PNG formats instantly.
+## 💻 Usage
 
-- **Smart Expense Splitter v4**  
-  Fairly split group expenses with detailed breakdowns and intelligent calculations.
+1. Open `index.html` in your web browser
+2. Click on any tool to launch it
+3. Each tool works independently with its own interface
 
-- **Time Zone Converter**  
-  Convert and compare times across different time zones with real-time updates and world clock display.
+## 🔧 Technical Details
 
-- **Advanced Color Palette Generator v2**  
-  Generate harmonious color palettes with various rules and export options for designers.
-
-- **Random Joke Generator**  
-  Get random jokes from multiple categories to lighten your mood or break the ice.
-
-- **Weather Dashboard v2**  
-  Real-time weather information and detailed forecasts powered by OpenMeteo API.
-
-- **Currency Converter**  
-  Convert currencies with real-time exchange rates, multiple selections, and flag displays.
-
-- **JSON Tree Viewer**  
-  Visualize and explore JSON data with an interactive, collapsible tree structure and syntax highlighting.
-
-## Technologies Used
-
-- HTML5, CSS3 (with responsive design)
-- JavaScript (vanilla ES6+)
-- Font Awesome for icons
+- Built with HTML5, CSS3, and vanilla JavaScript
+- Uses Font Awesome for icons
 - OpenMeteo API for weather data
-- No external frameworks or heavy libraries for optimal performance
+- No external frameworks required
 
-## Developer
+## 👨‍💻 Created by Oscar
 
-Created by **Oscar** — enhancing productivity through intelligent automation.
-
+*Enhancing productivity through intelligent automation*
