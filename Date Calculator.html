@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Date Calculator</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .calculator-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            width: 100%;
+            max-width: 500px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .calculator-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2, #f093fb, #f5576c);
+            background-size: 300% 300%;
+            animation: gradientShift 3s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .current-date-card {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 20px rgba(240, 147, 251, 0.3);
+            transform: translateY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .current-date-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .current-date-card i {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .current-date-card .date-text {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .input-section {
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .input-label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1rem;
+        }
+
+        .date-input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .date-input {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            background: white;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        .date-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .input-icon {
+            position: absolute;
+            right: 15px;
+            color: #667eea;
+            font-size: 1.2rem;
+            pointer-events: none;
+        }
+
+        .quick-select {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .quick-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex: 1;
+            min-width: 80px;
+        }
+
+        .quick-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .result-section {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s ease;
+        }
+
+        .result-section.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .result-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 20px;
+            box-shadow: 0 15px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .result-card.past {
+            background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%);
+            box-shadow: 0 15px 30px rgba(245, 87, 108, 0.3);
+        }
+
+        .result-card.today {
+            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+            box-shadow: 0 15px 30px rgba(78, 205, 196, 0.3);
+        }
+
+        .days-number {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .days-text {
+            font-size: 1.3rem;
+            opacity: 0.9;
+        }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .detail-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s ease;
+        }
+
+        .detail-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .detail-card h4 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .detail-card p {
+            color: #666;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e1e5e9;
+            border-radius: 3px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 3px;
+            transition: width 1s ease;
+            width: 0%;
+        }
+
+        .celebration {
+            animation: celebrate 0.6s ease;
+        }
+
+        @keyframes celebrate {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .floating-elements {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .floating-element {
+            position: absolute;
+            opacity: 0.1;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .floating-element:nth-child(1) { top: 20%; left: 10%; animation-delay: 0s; }
+        .floating-element:nth-child(2) { top: 60%; right: 10%; animation-delay: 2s; }
+        .floating-element:nth-child(3) { bottom: 20%; left: 20%; animation-delay: 4s; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+
+        @media (max-width: 768px) {
+            .calculator-container {
+                padding: 30px 20px;
+                margin: 10px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .days-number {
+                font-size: 2.5rem;
+            }
+
+            .details-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .quick-select {
+                flex-direction: column;
+            }
+
+            .quick-btn {
+                min-width: auto;
+            }
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator-container">
+        <div class="floating-elements">
+            <i class="fas fa-calendar-alt floating-element"></i>
+            <i class="fas fa-clock floating-element"></i>
+            <i class="fas fa-star floating-element"></i>
+        </div>
+
+        <div class="header">
+            <h1><i class="fas fa-calendar-check"></i> Date Calculator</h1>
+            <p>Calculate days between dates with style</p>
+        </div>
+
+        <div class="current-date-card">
+            <i class="fas fa-calendar-day"></i>
+            <div class="date-text" id="currentDateDisplay">Loading...</div>
+        </div>
+
+        <div class="input-section">
+            <div class="input-group">
+                <label class="input-label" for="targetDate">
+                    <i class="fas fa-target"></i> Select Target Date
+                </label>
+                <div class="date-input-wrapper">
+                    <input type="date" id="targetDate" class="date-input">
+                    <i class="fas fa-calendar-alt input-icon"></i>
+                </div>
+                <div class="quick-select">
+                    <button class="quick-btn" onclick="setQuickDate(7)">+1 Week</button>
+                    <button class="quick-btn" onclick="setQuickDate(30)">+1 Month</button>
+                    <button class="quick-btn" onclick="setQuickDate(365)">+1 Year</button>
+                    <button class="quick-btn" onclick="setQuickDate(0)">Today</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="resultSection" class="result-section">
+            <div id="resultCard" class="result-card">
+                <div id="daysNumber" class="days-number">0</div>
+                <div id="daysText" class="days-text">Select a date to calculate</div>
+            </div>
+
+            <div class="progress-bar">
+                <div id="progressFill" class="progress-fill"></div>
+            </div>
+
+            <div class="details-grid">
+                <div class="detail-card">
+                    <h4><i class="fas fa-info-circle"></i> Target Date</h4>
+                    <p id="targetDateInfo">No date selected</p>
+                </div>
+                <div class="detail-card">
+                    <h4><i class="fas fa-chart-line"></i> Time Breakdown</h4>
+                    <p id="timeBreakdown">-</p>
+                </div>
+                <div class="detail-card">
+                    <h4><i class="fas fa-calendar-week"></i> Day of Week</h4>
+                    <p id="dayOfWeek">-</p>
+                </div>
+                <div class="detail-card">
+                    <h4><i class="fas fa-business-time"></i> Business Days</h4>
+                    <p id="businessDays">-</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            updateCurrentDate();
+            setupEventListeners();
+            showResultSection();
+        });
+
+        function updateCurrentDate() {
+            const today = new Date();
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            };
+            document.getElementById('currentDateDisplay').textContent = today.toLocaleDateString('en-US', options);
+        }
+
+        function setupEventListeners() {
+            const dateInput = document.getElementById('targetDate');
+            dateInput.addEventListener('change', calculateAndDisplay);
+            dateInput.addEventListener('input', calculateAndDisplay);
+        }
+
+        function setQuickDate(days) {
+            const today = new Date();
+            const targetDate = new Date(today.getTime() + (days * 24 * 60 * 60 * 1000));
+            const dateString = targetDate.toISOString().split('T')[0];
+            document.getElementById('targetDate').value = dateString;
+            calculateAndDisplay();
+        }
+
+        function showResultSection() {
+            const resultSection = document.getElementById('resultSection');
+            setTimeout(() => {
+                resultSection.classList.add('show');
+            }, 300);
+        }
+
+        function calculateAndDisplay() {
+            const targetDateInput = document.getElementById('targetDate');
+            const targetDate = targetDateInput.value;
+            
+            if (!targetDate) {
+                resetDisplay();
+                return;
+            }
+
+            const days = calculateDaysDifference(targetDate);
+            const targetDateObj = new Date(targetDate);
+            
+            updateResultCard(days);
+            updateTargetDateInfo(targetDateObj);
+            updateTimeBreakdown(days);
+            updateDayOfWeek(targetDateObj);
+            updateBusinessDays(days, targetDateObj);
+            updateProgressBar(days);
+            
+            if (days === 0) {
+                document.getElementById('resultCard').classList.add('celebration');
+                setTimeout(() => {
+                    document.getElementById('resultCard').classList.remove('celebration');
+                }, 600);
+            }
+        }
+
+        function calculateDaysDifference(targetDateString) {
+            const today = new Date();
+            const target = new Date(targetDateString);
+            
+            today.setHours(0, 0, 0, 0);
+            target.setHours(0, 0, 0, 0);
+            
+            const timeDifference = target.getTime() - today.getTime();
+            return Math.ceil(timeDifference / (1000 * 3600 * 24));
+        }
+
+        function updateResultCard(days) {
+            const resultCard = document.getElementById('resultCard');
+            const daysNumber = document.getElementById('daysNumber');
+            const daysText = document.getElementById('daysText');
+            
+            // Reset classes
+            resultCard.className = 'result-card';
+            
+            if (days > 0) {
+                daysNumber.textContent = days;
+                daysText.textContent = `day${days > 1 ? 's' : ''} from now`;
+                resultCard.classList.add('future');
+            } else if (days < 0) {
+                daysNumber.textContent = Math.abs(days);
+                daysText.textContent = `day${Math.abs(days) > 1 ? 's' : ''} ago`;
+                resultCard.classList.add('past');
+            } else {
+                daysNumber.textContent = '🎉';
+                daysText.textContent = 'Today!';
+                resultCard.classList.add('today');
+            }
+        }
+
+        function updateTargetDateInfo(targetDate) {
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            };
+            document.getElementById('targetDateInfo').textContent = targetDate.toLocaleDateString('en-US', options);
+        }
+
+        function updateTimeBreakdown(days) {
+            const absDays = Math.abs(days);
+            const weeks = Math.floor(absDays / 7);
+            const remainingDays = absDays % 7;
+            const months = Math.floor(absDays / 30.44);
+            const years = Math.floor(absDays / 365.25);
+            
+            let breakdown = [];
+            
+            if (years > 0) {
+                breakdown.push(`${years} year${years > 1 ? 's' : ''}`);
+            }
+            if (months > 0 && years === 0) {
+                breakdown.push(`${months} month${months > 1 ? 's' : ''}`);
+            }
+            if (weeks > 0 && months === 0) {
+                breakdown.push(`${weeks} week${weeks > 1 ? 's' : ''}`);
+                if (remainingDays > 0) {
+                    breakdown.push(`${remainingDays} day${remainingDays > 1 ? 's' : ''}`);
+                }
+            }
+            
+            document.getElementById('timeBreakdown').textContent = breakdown.length > 0 ? breakdown.join(', ') : `${absDays} day${absDays !== 1 ? 's' : ''}`;
+        }
+
+        function updateDayOfWeek(targetDate) {
+            const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const dayName = dayNames[targetDate.getDay()];
+            document.getElementById('dayOfWeek').textContent = dayName;
+        }
+
+        function updateBusinessDays(totalDays, targetDate) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            let businessDays = 0;
+            let currentDate = new Date(today);
+            const endDate = new Date(targetDate);
+            
+            if (totalDays === 0) {
+                document.getElementById('businessDays').textContent = 'Today';
+                return;
+            }
+            
+            const direction = totalDays > 0 ? 1 : -1;
+            const daysToCount = Math.abs(totalDays);
+            
+            for (let i = 0; i < daysToCount; i++) {
+                currentDate.setDate(currentDate.getDate() + direction);
+                const dayOfWeek = currentDate.getDay();
+                if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Not Sunday (0) or Saturday (6)
+                    businessDays++;
+                }
+            }
+            
+            document.getElementById('businessDays').textContent = `${businessDays} business day${businessDays !== 1 ? 's' : ''}`;
+        }
+
+        function updateProgressBar(days) {
+            const progressFill = document.getElementById('progressFill');
+            const maxDays = 365; // Base the progress on a year
+            const percentage = Math.min(Math.abs(days) / maxDays * 100, 100);
+            
+            setTimeout(() => {
+                progressFill.style.width = percentage + '%';
+            }, 100);
+        }
+
+        function resetDisplay() {
+            document.getElementById('daysNumber').textContent = '0';
+            document.getElementById('daysText').textContent = 'Select a date to calculate';
+            document.getElementById('targetDateInfo').textContent = 'No date selected';
+            document.getElementById('timeBreakdown').textContent = '-';
+            document.getElementById('dayOfWeek').textContent = '-';
+            document.getElementById('businessDays').textContent = '-';
+            document.getElementById('progressFill').style.width = '0%';
+            
+            const resultCard = document.getElementById('resultCard');
+            resultCard.className = 'result-card';
+        }
+    </script>
+</body>
+</html>
