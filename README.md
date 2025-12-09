@@ -25,9 +25,8 @@ A collection of 11 web-based productivity tools designed to enhance your workflo
 
 ## 💻 Usage
 
-1. Open `index.html` in your web browser
-2. Click on any tool to launch it
-3. Each tool works independently with its own interface
+1. Click on any tool to launch it
+2. Each tool works independently with its own interface
 
 ## 🔧 Technical Details
 
