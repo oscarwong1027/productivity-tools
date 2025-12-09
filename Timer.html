@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pomodoro Pro</title>
+    <style>
+        /* --- 1. CSS Variables --- */
+        :root {
+            --bg-body: #1e2140;
+            --bg-card: #272c5a;
+            --text-primary: #d7e0ff;
+            --text-secondary: #9095c7;
+            
+            /* Theme Colors */
+            --color-focus: #f87070;
+            --color-short: #70f8a8;
+            --color-long: #d981f9; /* New Purple for Long Break */
+            
+            --input-bg: #161932;
+            --current-color: var(--color-focus);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Helvetica Neue', sans-serif; }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background 0.5s ease;
+        }
+
+        .app-container {
+            background-color: var(--bg-card);
+            padding: 35px;
+            border-radius: 30px;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.4);
+            text-align: center;
+            width: 90%;
+            max-width: 450px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        /* --- Task Input --- */
+        .task-input {
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+            color: var(--text-primary);
+            font-size: 1.2rem;
+            text-align: center;
+            width: 80%;
+            padding: 5px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        .task-input:focus { border-bottom-color: var(--current-color); }
+        .task-input::placeholder { color: var(--text-secondary); opacity: 0.5; font-size: 1rem; }
+
+        /* --- Header & Stats --- */
+        header { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        
+        .mode-badge {
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            background: rgba(0,0,0,0.2);
+            padding: 5px 12px;
+            border-radius: 20px;
+            color: var(--current-color);
+        }
+
+        .cycle-dots {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            background-color: rgba(255,255,255,0.1);
+            transition: background-color 0.3s;
+        }
+        .dot.active { background-color: var(--current-color); }
+
+        /* --- SVG Timer --- */
+        .timer-wrapper { position: relative; width: 280px; height: 280px; }
+        .timer-svg { transform: rotate(-90deg); width: 100%; height: 100%; }
+        .ring-bg { fill: none; stroke: #161932; stroke-width: 8; }
+        
+        .ring-progress {
+            fill: none;
+            stroke: var(--current-color);
+            stroke-width: 8;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1s linear, stroke 0.5s ease;
+        }
+
+        .time-display {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 5rem;
+            font-weight: bold;
+            user-select: none;
+        }
+
+        /* --- Controls --- */
+        .controls { display: flex; gap: 15px; width: 100%; justify-content: center; }
+
+        button {
+            border: none;
+            background: transparent;
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 12px 30px;
+            border-radius: 30px;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+        }
+
+        button:active { transform: scale(0.95); }
+
+        #btn-main { background-color: var(--current-color); color: var(--bg-card); min-width: 120px; }
+        #btn-main:hover { filter: brightness(1.1); }
+        
+        .icon-btn { padding: 10px; font-size: 1.2rem; color: var(--text-secondary); }
+        .icon-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.1); }
+
+        /* --- Settings Panel --- */
+        .settings-panel {
+            background: var(--input-bg);
+            width: 100%;
+            padding: 20px;
+            border-radius: 20px;
+            display: none;
+            flex-direction: column;
+            gap: 15px;
+            text-align: left;
+            margin-top: 10px;
+        }
+        .settings-panel.open { display: flex; animation: slideDown 0.3s ease; }
+        
+        .setting-row { display: flex; justify-content: space-between; align-items: center; }
+        .setting-label { font-size: 0.9rem; color: var(--text-secondary); }
+
+        input[type="number"] {
+            width: 60px; padding: 5px; border-radius: 5px;
+            border: 1px solid var(--text-secondary);
+            background: var(--bg-card); color: white;
+            text-align: center; font-size: 1rem;
+        }
+
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Task Input -->
+        <input type="text" class="task-input" id="task-input" placeholder="What are you working on?">
+
+        <!-- Header: Mode Badge & Cycle Dots -->
+        <header>
+            <div class="mode-badge" id="mode-badge">Focus</div>
+            <div class="cycle-dots" id="cycle-dots">
+                <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+            </div>
+        </header>
+
+        <!-- Timer -->
+        <div class="timer-wrapper">
+            <svg class="timer-svg" viewBox="0 0 300 300">
+                <circle class="ring-bg" cx="150" cy="150" r="130"></circle>
+                <circle class="ring-progress" cx="150" cy="150" r="130"></circle>
+            </svg>
+            <div class="time-display" id="time-left">25:00</div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <button id="btn-main">Start</button>
+            <button class="icon-btn" id="btn-reset" title="Reset">↻</button>
+            <button class="icon-btn" id="btn-settings" title="Settings">⚙</button>
+        </div>
+
+        <!-- Settings -->
+        <div class="settings-panel" id="settings-panel">
+            <div class="setting-row">
+                <span class="setting-label">Focus Duration</span>
+                <input type="number" id="set-focus" value="25">
+            </div>
+            <div class="setting-row">
+                <span class="setting-label">Short Break</span>
+                <input type="number" id="set-short" value="5">
+            </div>
+            <div class="setting-row">
+                <span class="setting-label">Long Break</span>
+                <input type="number" id="set-long" value="15">
+            </div>
+            <div class="setting-row">
+                <span class="setting-label">Long Break Interval</span>
+                <input type="number" id="set-interval" value="4">
+            </div>
+            <div class="setting-row" style="justify-content: center; margin-top: 10px;">
+                <button class="icon-btn" id="btn-notify" style="font-size: 0.8rem; width: 100%;">🔔 Enable Notifications</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /** --- CONFIG & STATE --- */
+        const CONFIG = {
+            audioUrl: 'https://actions.google.com/sounds/v1/alarms/beep_short.ogg' 
+        };
+
+        const els = {
+            taskInput: document.getElementById('task-input'),
+            modeBadge: document.getElementById('mode-badge'),
+            dotsContainer: document.getElementById('cycle-dots'),
+            timeLeft: document.getElementById('time-left'),
+            progressRing: document.querySelector('.ring-progress'),
+            mainBtn: document.getElementById('btn-main'),
+            resetBtn: document.getElementById('btn-reset'),
+            settingsBtn: document.getElementById('btn-settings'),
+            settingsPanel: document.getElementById('settings-panel'),
+            notifyBtn: document.getElementById('btn-notify'),
+            inputs: {
+                focus: document.getElementById('set-focus'),
+                short: document.getElementById('set-short'),
+                long: document.getElementById('set-long'),
+                interval: document.getElementById('set-interval')
+            },
+            root: document.documentElement
+        };
+
+        // SVG Setup
+        const radius = els.progressRing.r.baseVal.value;
+        const circumference = radius * 2 * Math.PI;
+        els.progressRing.style.strokeDasharray = `${circumference} ${circumference}`;
+
+        let state = {
+            mode: 'focus', // focus, short, long
+            timeLeft: 25 * 60,
+            totalTime: 25 * 60,
+            isActive: false,
+            timerId: null,
+            cyclesCompleted: 0,
+            settings: {
+                focus: 25,
+                short: 5,
+                long: 15,
+                interval: 4
+            }
+        };
+
+        const audio = new Audio(CONFIG.audioUrl);
+
+        /** --- INITIALIZATION --- */
+        function init() {
+            loadState(); // Load from LocalStorage
+            renderDots();
+            updateDisplay();
+            requestNotificationPermission(); // Check if already granted
+        }
+
+        /** --- CORE LOGIC --- */
+        function updateDisplay() {
+            const m = Math.floor(state.timeLeft / 60);
+            const s = state.timeLeft % 60;
+            const timeStr = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            
+            els.timeLeft.textContent = timeStr;
+            document.title = `(${timeStr}) ${state.mode.toUpperCase()}`;
+
+            // SVG Progress
+            const percent = state.timeLeft / state.totalTime;
+            const offset = circumference - (percent * circumference);
+            els.progressRing.style.strokeDashoffset = offset;
+        }
+
+        function switchMode(nextMode) {
+            state.mode = nextMode;
+            
+            // Set Color & Time based on mode
+            let duration = 0;
+            let colorVar = '';
+            let label = '';
+
+            if (nextMode === 'focus') {
+                duration = state.settings.focus;
+                colorVar = '--color-focus';
+                label = 'Focus';
+            } else if (nextMode === 'short') {
+                duration = state.settings.short;
+                colorVar = '--color-short';
+                label = 'Short Break';
+            } else if (nextMode === 'long') {
+                duration = state.settings.long;
+                colorVar = '--color-long';
+                label = 'Long Break';
+            }
+
+            state.totalTime = duration * 60;
+            state.timeLeft = state.totalTime;
+            
+            // Update UI
+            els.modeBadge.textContent = label;
+            els.root.style.setProperty('--current-color', `var(${colorVar})`);
+            
+            updateDisplay();
+            saveState();
+        }
+
+        function handleTimerComplete() {
+            stopTimer();
+            audio.play();
+            sendNotification("Timer Finished!", `Your ${state.mode} session is done.`);
+
+            if (state.mode === 'focus') {
+                state.cyclesCompleted++;
+                renderDots();
+                
+                // Check if due for Long Break
+                if (state.cyclesCompleted % state.settings.interval === 0) {
+                    switchMode('long');
+                } else {
+                    switchMode('short');
+                }
+            } else {
+                // Break is over, back to work
+                switchMode('focus');
+            }
+        }
+
+        function tick() {
+            if (state.timeLeft > 0) {
+                state.timeLeft--;
+                updateDisplay();
+            } else {
+                handleTimerComplete();
+            }
+        }
+
+        function toggleTimer() {
+            if (state.isActive) {
+                stopTimer();
+            } else {
+                state.isActive = true;
+                state.timerId = setInterval(tick, 1000);
+                els.mainBtn.textContent = "Pause";
+                els.mainBtn.style.opacity = "0.8";
+            }
+        }
+
+        function stopTimer() {
+            clearInterval(state.timerId);
+            state.isActive = false;
+            els.mainBtn.textContent = "Start";
+            els.mainBtn.style.opacity = "1";
+        }
+
+        function resetTimer() {
+            stopTimer();
+            state.timeLeft = state.totalTime;
+            updateDisplay();
+            els.progressRing.style.strokeDashoffset = 0;
+        }
+
+        /** --- VISUAL HELPERS --- */
+        function renderDots() {
+            // Clear existing
+            els.dotsContainer.innerHTML = '';
+            const interval = state.settings.interval;
+            // Calculate progress within current interval set
+            const currentCycleInSet = state.cyclesCompleted % interval; 
+            
+            for(let i = 0; i < interval; i++) {
+                const dot = document.createElement('div');
+                dot.classList.add('dot');
+                // If we are past this dot, or (it's the last one and we just finished it)
+                if (i < currentCycleInSet) {
+                    dot.classList.add('active');
+                }
+                els.dotsContainer.appendChild(dot);
+            }
+        }
+
+        /** --- NOTIFICATIONS --- */
+        function requestNotificationPermission() {
+            if ("Notification" in window) {
+                Notification.requestPermission().then(permission => {
+                    if (permission === "granted") {
+                        els.notifyBtn.textContent = "🔔 Notifications Active";
+                        els.notifyBtn.disabled = true;
+                    }
+                });
+            }
+        }
+
+        function sendNotification(title, body) {
+            if (Notification.permission === "granted") {
+                new Notification(title, { body, icon: '' });
+            }
+        }
+
+        /** --- LOCAL STORAGE --- */
+        function saveState() {
+            const data = {
+                cycles: state.cyclesCompleted,
+                settings: state.settings,
+                task: els.taskInput.value
+            };
+            localStorage.setItem('pomodoro-v3', JSON.stringify(data));
+        }
+
+        function loadState() {
+            const saved = localStorage.getItem('pomodoro-v3');
+            if (saved) {
+                const data = JSON.parse(saved);
+                state.cyclesCompleted = data.cycles || 0;
+                state.settings = { ...state.settings, ...data.settings };
+                els.taskInput.value = data.task || "";
+                
+                // Update Inputs to match saved settings
+                els.inputs.focus.value = state.settings.focus;
+                els.inputs.short.value = state.settings.short;
+                els.inputs.long.value = state.settings.long;
+                els.inputs.interval.value = state.settings.interval;
+                
+                // Reset time to match saved focus setting
+                state.totalTime = state.settings.focus * 60;
+                state.timeLeft = state.totalTime;
+            }
+        }
+
+        /** --- EVENT LISTENERS --- */
+        els.mainBtn.addEventListener('click', toggleTimer);
+        els.resetBtn.addEventListener('click', resetTimer);
+        els.settingsBtn.addEventListener('click', () => els.settingsPanel.classList.toggle('open'));
+        els.notifyBtn.addEventListener('click', requestNotificationPermission);
+        
+        // Input Listeners (Auto-save)
+        Object.keys(els.inputs).forEach(key => {
+            els.inputs[key].addEventListener('change', (e) => {
+                const val = parseInt(e.target.value);
+                if (val > 0) {
+                    state.settings[key] = val;
+                    saveState();
+                    // If not running, update display immediately
+                    if (!state.isActive && state.mode === 'focus' && key === 'focus') {
+                        state.totalTime = val * 60;
+                        state.timeLeft = val * 60;
+                        updateDisplay();
+                    }
+                    if(key === 'interval') renderDots();
+                }
+            });
+        });
+
+        els.taskInput.addEventListener('input', saveState);
+
+        // Keyboard
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && document.activeElement !== els.taskInput) {
+                e.preventDefault();
+                toggleTimer();
+            }
+        });
+
+        // Run Init
+        init();
+
+    </script>
+</body>
+</html>
