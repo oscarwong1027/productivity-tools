@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cron Expression Builder Pro</title>
+    <style>
+        :root {
+            /* Color Palette - Modern Indigo & Slate */
+            --primary: #6366f1; /* Indigo 500 */
+            --primary-dark: #4f46e5;
+            --secondary: #ec4899; /* Pink 500 */
+            --bg-body: #f8fafc;
+            --bg-card: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --success: #10b981;
+            
+            /* Segment Colors for Educational Mapping */
+            --c-min: #3b82f6;
+            --c-hour: #8b5cf6;
+            --c-dom: #ec4899;
+            --c-mon: #f59e0b;
+            --c-dow: #10b981;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        /* --- Header --- */
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin: 0 0 10px 0;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1px;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+        }
+
+        /* --- Layout Grid --- */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 30px;
+            align-items: start;
+        }
+
+        @media (max-width: 850px) {
+            .main-grid { grid-template-columns: 1fr; }
+        }
+
+        /* --- Cards --- */
+        .card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+            border: 1px solid var(--border);
+        }
+
+        h2 {
+            margin-top: 0;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        /* --- The Result Display (Sticky) --- */
+        .result-wrapper {
+            background: #0f172a;
+            border-radius: 12px;
+            padding: 25px;
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .cron-display {
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 2rem;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 2px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            cursor: pointer;
+        }
+
+        /* Color coding the segments */
+        .seg-min { color: var(--c-min); }
+        .seg-hour { color: var(--c-hour); }
+        .seg-dom { color: var(--c-dom); }
+        .seg-mon { color: var(--c-mon); }
+        .seg-dow { color: var(--c-dow); }
+
+        .human-readout {
+            margin-top: 15px;
+            color: #94a3b8;
+            font-size: 0.95rem;
+            font-weight: 500;
+            min-height: 1.5em;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: background 0.2s;
+        }
+        .copy-btn:hover { background: rgba(255,255,255,0.2); }
+
+        /* --- Form Controls --- */
+        .control-group {
+            margin-bottom: 20px;
+            position: relative;
+            padding-left: 15px;
+            border-left: 4px solid transparent;
+            transition: border-color 0.3s;
+        }
+
+        /* Interactive Border Colors */
+        .control-group.group-min:focus-within { border-left-color: var(--c-min); }
+        .control-group.group-hour:focus-within { border-left-color: var(--c-hour); }
+        .control-group.group-dom:focus-within { border-left-color: var(--c-dom); }
+        .control-group.group-mon:focus-within { border-left-color: var(--c-mon); }
+        .control-group.group-dow:focus-within { border-left-color: var(--c-dow); }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: var(--text-main);
+        }
+
+        .select-wrapper {
+            position: relative;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background-color: #fff;
+            font-size: 1rem;
+            appearance: none;
+            cursor: pointer;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        /* Custom Arrow */
+        .select-wrapper::after {
+            content: "▼";
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
+
+        /* --- Presets --- */
+        .presets {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 25px;
+        }
+
+        .preset-btn {
+            background: #f1f5f9;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: var(--text-main);
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .preset-btn:hover {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        /* --- Educational Section --- */
+        .anatomy-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 5px;
+            margin-bottom: 30px;
+        }
+
+        .anatomy-item {
+            text-align: center;
+            padding: 10px 5px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .anatomy-val { font-weight: bold; font-family: monospace; font-size: 1.2rem; }
+        .anatomy-label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; margin-top: 5px; }
+
+        /* Color mapping for anatomy */
+        .anatomy-item.a-min .anatomy-val { color: var(--c-min); }
+        .anatomy-item.a-hour .anatomy-val { color: var(--c-hour); }
+        .anatomy-item.a-dom .anatomy-val { color: var(--c-dom); }
+        .anatomy-item.a-mon .anatomy-val { color: var(--c-mon); }
+        .anatomy-item.a-dow .anatomy-val { color: var(--c-dow); }
+
+        .explanation-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .explanation-list li {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .explanation-list li:last-child { border-bottom: none; }
+
+        .char-badge {
+            display: inline-block;
+            background: #e0e7ff;
+            color: var(--primary-dark);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #1e293b;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 30px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            opacity: 0;
+        }
+
+        .toast.visible {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Cron Expression Builder</h1>
+        <div class="subtitle">Visual, interactive, and error-free scheduling</div>
+    </header>
+
+    <div class="main-grid">
+        
+        <!-- LEFT COLUMN: Generator -->
+        <div class="card">
+            <h2>⚡ Generator</h2>
+            
+            <!-- Result Box -->
+            <div class="result-wrapper" onclick="copyToClipboard()">
+                <button class="copy-btn">Copy</button>
+                <div class="cron-display">
+                    <span id="res-min" class="seg-min">*</span>
+                    <span id="res-hour" class="seg-hour">*</span>
+                    <span id="res-dom" class="seg-dom">*</span>
+                    <span id="res-mon" class="seg-mon">*</span>
+                    <span id="res-dow" class="seg-dow">*</span>
+                </div>
+                <div class="human-readout" id="human-text">Runs every minute</div>
+            </div>
+
+            <!-- Presets -->
+            <div class="presets">
+                <button class="preset-btn" onclick="applyPreset('*','*','*','*','*')">Every Minute</button>
+                <button class="preset-btn" onclick="applyPreset('0','*','*','*','*')">Hourly</button>
+                <button class="preset-btn" onclick="applyPreset('0','0','*','*','*')">Daily (Midnight)</button>
+                <button class="preset-btn" onclick="applyPreset('0','0','*','*','1')">Weekly (Mon)</button>
+                <button class="preset-btn" onclick="applyPreset('0','12','1','*','*')">Monthly (1st)</button>
+            </div>
+
+            <form id="cronForm">
+                <div class="control-group group-min">
+                    <label>Minute <span style="color:var(--c-min)">●</span></label>
+                    <div class="select-wrapper">
+                        <select id="minute" onchange="updateCron()"></select>
+                    </div>
+                </div>
+
+                <div class="control-group group-hour">
+                    <label>Hour <span style="color:var(--c-hour)">●</span></label>
+                    <div class="select-wrapper">
+                        <select id="hour" onchange="updateCron()"></select>
+                    </div>
+                </div>
+
+                <div class="control-group group-dom">
+                    <label>Day of Month <span style="color:var(--c-dom)">●</span></label>
+                    <div class="select-wrapper">
+                        <select id="dayOfMonth" onchange="updateCron()"></select>
+                    </div>
+                </div>
+
+                <div class="control-group group-mon">
+                    <label>Month <span style="color:var(--c-mon)">●</span></label>
+                    <div class="select-wrapper">
+                        <select id="month" onchange="updateCron()">
+                            <option value="*">Every Month (*)</option>
+                            <option value="1">January</option>
+                            <option value="2">February</option>
+                            <option value="3">March</option>
+                            <option value="4">April</option>
+                            <option value="5">May</option>
+                            <option value="6">June</option>
+                            <option value="7">July</option>
+                            <option value="8">August</option>
+                            <option value="9">September</option>
+                            <option value="10">October</option>
+                            <option value="11">November</option>
+                            <option value="12">December</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="control-group group-dow">
+                    <label>Day of Week <span style="color:var(--c-dow)">●</span></label>
+                    <div class="select-wrapper">
+                        <select id="dayOfWeek" onchange="updateCron()">
+                            <option value="*">Every Day (*)</option>
+                            <option value="1">Monday</option>
+                            <option value="2">Tuesday</option>
+                            <option value="3">Wednesday</option>
+                            <option value="4">Thursday</option>
+                            <option value="5">Friday</option>
+                            <option value="6">Saturday</option>
+                            <option value="0">Sunday</option>
+                        </select>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- RIGHT COLUMN: Education -->
+        <div class="card">
+            <h2>📚 Understanding Cron</h2>
+            
+            <p style="color: var(--text-muted); margin-bottom: 25px;">
+                Cron expressions are configuration strings used to schedule tasks to run periodically at fixed times, dates, or intervals.
+            </p>
+
+            <!-- Visual Anatomy -->
+            <div class="anatomy-grid">
+                <div class="anatomy-item a-min">
+                    <div class="anatomy-val">*</div>
+                    <div class="anatomy-label">Minute</div>
+                </div>
+                <div class="anatomy-item a-hour">
+                    <div class="anatomy-val">*</div>
+                    <div class="anatomy-label">Hour</div>
+                </div>
+                <div class="anatomy-item a-dom">
+                    <div class="anatomy-val">*</div>
+                    <div class="anatomy-label">Day (Mo)</div>
+                </div>
+                <div class="anatomy-item a-mon">
+                    <div class="anatomy-val">*</div>
+                    <div class="anatomy-label">Month</div>
+                </div>
+                <div class="anatomy-item a-dow">
+                    <div class="anatomy-val">*</div>
+                    <div class="anatomy-label">Day (Wk)</div>
+                </div>
+            </div>
+
+            <h3>Special Characters Guide</h3>
+            <ul class="explanation-list">
+                <li>
+                    <span class="char-badge">*</span> <strong>Asterisk (Wildcard)</strong>
+                    <div style="font-size: 0.9rem; color: var(--text-muted); margin-top: 5px;">
+                        Means "every" value. For example, <code>*</code> in the Minute field means "every minute."
+                    </div>
+                </li>
+                <li>
+                    <span class="char-badge">,</span> <strong>Comma (List)</strong>
+                    <div style="font-size: 0.9rem; color: var(--text-muted); margin-top: 5px;">
+                        Separates individual values. Example: <code>MON,WED,FRI</code> runs only on those specific days.
+                    </div>
+                </li>
+                <li>
+                    <span class="char-badge">-</span> <strong>Hyphen (Range)</strong>
+                    <div style="font-size: 0.9rem; color: var(--text-muted); margin-top: 5px;">
+                        Defines a range of values. Example: <code>9-17</code> in the Hour field means "from 9 AM to 5 PM."
+                    </div>
+                </li>
+                <li>
+                    <span class="char-badge">/</span> <strong>Slash (Step)</strong>
+                    <div style="font-size: 0.9rem; color: var(--text-muted); margin-top: 5px;">
+                        Specifies increments. Example: <code>*/15</code> in minutes means "every 15 minutes" (0, 15, 30, 45).
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="toast" id="toast">
+        <span>✅ Copied to clipboard!</span>
+    </div>
+</div>
+
+<script>
+    // --- Initialization ---
+    window.onload = function() {
+        populateSelect('minute', 0, 59, "Every Minute (*)");
+        populateSelect('hour', 0, 23, "Every Hour (*)");
+        populateSelect('dayOfMonth', 1, 31, "Every Day (*)");
+        // Month and DoW are static in HTML for better labels
+    };
+
+    // --- Helper: Populate Dropdowns ---
+    function populateSelect(id, start, end, defaultText) {
+        const select = document.getElementById(id);
+        
+        // Add Default Option
+        const defaultOpt = document.createElement('option');
+        defaultOpt.value = "*";
+        defaultOpt.text = defaultText;
+        select.appendChild(defaultOpt);
+
+        // Add Common Steps for Minutes (UX improvement)
+        if (id === 'minute') {
+            [0, 15, 30, 45].forEach(val => {
+                const opt = document.createElement('option');
+                opt.value = val;
+                opt.text = val < 10 ? `0${val} (Quarterly)` : `${val} (Quarterly)`;
+                // We don't append yet, we want them sorted numerically later
+            });
+        }
+
+        // Generate Range
+        for (let i = start; i <= end; i++) {
+            const opt = document.createElement('option');
+            opt.value = i;
+            // Pad with zero for aesthetics
+            opt.text = i < 10 ? '0' + i : i;
+            select.appendChild(opt);
+        }
+    }
+
+    // --- Core Logic: Update Cron ---
+    function updateCron() {
+        // Get values
+        const min = document.getElementById('minute').value;
+        const hour = document.getElementById('hour').value;
+        const dom = document.getElementById('dayOfMonth').value;
+        const mon = document.getElementById('month').value;
+        const dow = document.getElementById('dayOfWeek').value;
+
+        // Update the Visual Display (Spans)
+        document.getElementById('res-min').innerText = min;
+        document.getElementById('res-hour').innerText = hour;
+        document.getElementById('res-dom').innerText = dom;
+        document.getElementById('res-mon').innerText = mon;
+        document.getElementById('res-dow').innerText = dow;
+
+        // Update the Anatomy Box (Educational Link)
+        updateAnatomy(min, hour, dom, mon, dow);
+
+        // Generate Human Text
+        document.getElementById('human-text').innerText = generateHumanText(min, hour, dom, mon, dow);
+    }
+
+    // --- Logic: Update Anatomy Box ---
+    function updateAnatomy(min, hour, dom, mon, dow) {
+        const els = document.querySelectorAll('.anatomy-val');
+        els[0].innerText = min;
+        els[1].innerText = hour;
+        els[2].innerText = dom;
+        els[3].innerText = mon;
+        els[4].innerText = dow;
+    }
+
+    // --- Logic: Presets ---
+    function applyPreset(min, hour, dom, mon, dow) {
+        document.getElementById('minute').value = min;
+        document.getElementById('hour').value = hour;
+        document.getElementById('dayOfMonth').value = dom;
+        document.getElementById('month').value = mon;
+        document.getElementById('dayOfWeek').value = dow;
+        updateCron();
+    }
+
+    // --- Logic: Human Readable Text Generator ---
+    function generateHumanText(min, hour, dom, mon, dow) {
+        let parts = [];
+
+        // TIME
+        if (min === '*' && hour === '*') {
+            parts.push("Every minute");
+        } else if (min !== '*' && hour === '*') {
+            parts.push(`At minute ${min} past every hour`);
+        } else if (min === '*' && hour !== '*') {
+            parts.push(`Every minute of hour ${hour}`);
+        } else {
+            const m = min < 10 && min !== '0' && min.length < 2 ? '0'+min : min;
+            const mZero = min == 0 ? '00' : m;
+            parts.push(`At ${hour}:${mZero}`);
+        }
+
+        // DATE
+        if (dom !== '*') parts.push(`on day ${dom} of the month`);
+        
+        // MONTH
+        if (mon !== '*') {
+            const months = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            parts.push(`in ${months[parseInt(mon)]}`);
+        }
+
+        // WEEKDAY
+        if (dow !== '*') {
+            const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+            // Handle 7 as Sunday if needed, though our select uses 0
+            const dayIndex = parseInt(dow) === 7 ? 0 : parseInt(dow);
+            parts.push(`on ${days[dayIndex]}`);
+        }
+
+        if (parts.length === 0) return "Runs every minute";
+        
+        // Capitalize first letter
+        let sentence = parts.join(" ");
+        return sentence.charAt(0).toUpperCase() + sentence.slice(1) + ".";
+    }
+
+    // --- Utility: Copy to Clipboard ---
+    function copyToClipboard() {
+        const min = document.getElementById('res-min').innerText;
+        const hour = document.getElementById('res-hour').innerText;
+        const dom = document.getElementById('res-dom').innerText;
+        const mon = document.getElementById('res-mon').innerText;
+        const dow = document.getElementById('res-dow').innerText;
+        
+        const fullString = `${min} ${hour} ${dom} ${mon} ${dow}`;
+
+        navigator.clipboard.writeText(fullString).then(() => {
+            const toast = document.getElementById('toast');
+            toast.classList.add('visible');
+            setTimeout(() => {
+                toast.classList.remove('visible');
+            }, 2000);
+        });
+    }
+</script>
+
+</body>
+</html>
