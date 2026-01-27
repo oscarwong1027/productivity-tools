@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#ffffff">
+    <title>壽司郎計算機</title>
+    
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="icon" type="image/png" href="icon.png">
+    
+    <!-- SW Killer & Libraries -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) registration.unregister();
+            });
+        }
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+
+    <style>
+        body {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            overscroll-behavior-y: none;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #F8FAFC;
+        }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+        
+        /* Smooth Animations */
+        @keyframes slideUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        
+        @keyframes popIn {
+            0% { transform: scale(0.95); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop { animation: popIn 0.2s ease-out; }
+
+        /* Custom Scrollbar hide */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, memo, useCallback } = React;
+
+        // --- Icons (Refined) ---
+        const Icon = ({ path, size = 20, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {path}
+            </svg>
+        );
+        
+        const Icons = {
+            Plus: <path d="M12 5v14M5 12h14"/>,
+            Minus: <path d="M5 12h14"/>,
+            Trash: <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>,
+            Undo: <path d="M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"/>,
+            User: <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/>,
+            Timer: <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>,
+            Play: <polygon points="5 3 19 12 5 21 5 3"></polygon>,
+            Pause: <path d="M6 4h4v16H6zM14 4h4v16h-4z"/>,
+            Stop: <rect x="4" y="4" width="16" height="16" rx="2" />,
+            X: <path d="M18 6 6 18M6 6l12 12"/>,
+            Backspace: <path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM18 9l-6 6M12 9l6 6"/>
+        };
+
+        // --- Components ---
+
+        const PlateCard = memo(({ plate, count, onUpdate }) => (
+            <div className={`relative overflow-hidden bg-white rounded-2xl shadow-sm border-l-[6px] ${plate.borderColor} flex flex-col h-28 transition-transform active:scale-[0.99]`}>
+                {/* Background Decor */}
+                <div className={`absolute right-0 top-0 w-24 h-24 opacity-[0.03] rounded-full -mr-4 -mt-4 ${plate.bgDecor}`}></div>
+                
+                <div className="flex-1 p-3 flex flex-col justify-between relative z-10">
+                    <div className="flex justify-between items-start">
+                        <div className="flex flex-col">
+                            <span className={`text-xs font-bold uppercase tracking-wider opacity-60 ${plate.textColor}`}>{plate.label}</span>
+                            <span className="text-2xl font-black text-slate-800">${plate.price}</span>
+                        </div>
+                        {/* Image Placeholder or Actual Image */}
+                        <div className="w-12 h-12 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center shadow-inner">
+                             <img 
+                                src={plate.img} 
+                                alt={plate.label}
+                                className="w-10 h-10 object-contain drop-shadow-sm" 
+                                onError={(e) => { e.target.style.display = 'none'; }} 
+                            />
+                        </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between mt-2">
+                        <button 
+                            onClick={() => onUpdate(plate.id, -1)}
+                            className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors ${count > 0 ? 'bg-slate-100 text-slate-600 active:bg-slate-200' : 'bg-slate-50 text-slate-300'}`}
+                        >
+                            <Icon path={Icons.Minus} size={16} />
+                        </button>
+                        
+                        <span className={`text-2xl font-black tabular-nums ${count > 0 ? 'text-slate-800' : 'text-slate-200'}`}>
+                            {count}
+                        </span>
+                        
+                        <button 
+                            onClick={() => onUpdate(plate.id, 1)}
+                            className="w-9 h-9 flex items-center justify-center rounded-xl bg-blue-600 text-white shadow-md shadow-blue-200 active:bg-blue-700 active:scale-95 transition-all"
+                        >
+                            <Icon path={Icons.Plus} size={18} strokeWidth={3} />
+                        </button>
+                    </div>
+                </div>
+            </div>
+        ));
+
+        const Keypad = memo(({ value, onChange, onAdd, onClose }) => {
+            const handlePress = (num) => {
+                if (value.length < 5) onChange(prev => prev + num);
+            };
+            return (
+                <div className="fixed inset-0 z-[60] flex flex-col justify-end">
+                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
+                    <div className="bg-white rounded-t-3xl shadow-2xl relative z-10 animate-slide-up pb-safe">
+                        <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+                             <div>
+                                 <div className="text-xs font-bold text-slate-400 uppercase tracking-wide">自訂價格</div>
+                                 <div className="text-3xl font-black text-slate-800 flex items-baseline">
+                                     <span className="text-xl mr-1 text-slate-400">$</span>
+                                     {value || <span className="text-slate-200">0</span>}
+                                 </div>
+                             </div>
+                             <button onClick={onClose} className="bg-slate-100 p-2 rounded-full text-slate-500 hover:bg-slate-200">
+                                 <Icon path={Icons.X} />
+                             </button>
+                        </div>
+                        <div className="grid grid-cols-3 gap-3 p-4 bg-slate-50">
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+                                <button key={num} onClick={() => handlePress(num.toString())} className="bg-white h-14 rounded-2xl shadow-sm border-b-2 border-slate-200 text-xl font-bold text-slate-700 active:border-b-0 active:translate-y-[2px] transition-all">{num}</button>
+                            ))}
+                            <button onClick={() => onChange(prev => prev.slice(0, -1))} className="bg-slate-200 h-14 rounded-2xl shadow-sm border-b-2 border-slate-300 text-slate-600 flex items-center justify-center active:border-b-0 active:translate-y-[2px]"><Icon path={Icons.Backspace} /></button>
+                            <button onClick={() => handlePress('0')} className="bg-white h-14 rounded-2xl shadow-sm border-b-2 border-slate-200 text-xl font-bold text-slate-700 active:border-b-0 active:translate-y-[2px]">0</button>
+                            <button onClick={onAdd} className="bg-blue-600 h-14 rounded-2xl shadow-md shadow-blue-200 text-white flex items-center justify-center text-lg font-bold active:scale-[0.98]">加入</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        });
+
+        // --- Main App ---
+        const SushiroApp = () => {
+            // Data Config
+            const PLATES = [
+                { id: 'red', price: 12, label: '紅碟 Red', img: 'sushiro/red.png', textColor: 'text-red-600', borderColor: 'border-red-500', bgDecor: 'bg-red-500' },
+                { id: 'silver', price: 17, label: '銀碟 Silver', img: 'sushiro/silver.png', textColor: 'text-slate-500', borderColor: 'border-slate-400', bgDecor: 'bg-slate-800' },
+                { id: 'gold', price: 22, label: '金碟 Gold', img: 'sushiro/gold.png', textColor: 'text-yellow-600', borderColor: 'border-yellow-400', bgDecor: 'bg-yellow-500' },
+                { id: 'black', price: 27, label: '黑碟 Black', img: 'sushiro/black.png', textColor: 'text-slate-800', borderColor: 'border-slate-900', bgDecor: 'bg-black' },
+            ];
+            const OTHER_PRICES = [10, 13, 18, 19, 20, 27, 28, 32, 33, 39];
+
+            // State
+            const [counts, setCounts] = useState({ red: 0, silver: 0, gold: 0, black: 0 });
+            const [extraItems, setExtraItems] = useState([]); 
+            const [customPrice, setCustomPrice] = useState('');
+            const [history, setHistory] = useState([]);
+            const [peopleCount, setPeopleCount] = useState(1);
+            const [showKeypad, setShowKeypad] = useState(false);
+            
+            // Timer State
+            const [timerMode, setTimerMode] = useState('idle');
+            const [startTime, setStartTime] = useState(null);
+            const [targetTime, setTargetTime] = useState(null);
+            const [remainingMs, setRemainingMs] = useState(60 * 60 * 1000);
+
+            // Utils
+            const haptic = () => { if (window.navigator?.vibrate) window.navigator.vibrate(10); };
+            
+            const saveToHistory = () => {
+                setHistory(prev => [...prev, { counts: { ...counts }, extraItems: JSON.parse(JSON.stringify(extraItems)) }]);
+            };
+
+            // Persistence
+            useEffect(() => {
+                const saved = localStorage.getItem('sushiro_v30');
+                if (saved) {
+                    try {
+                        const p = JSON.parse(saved);
+                        if(p.counts) setCounts(p.counts);
+                        if(p.extraItems) setExtraItems(p.extraItems);
+                        if(p.peopleCount) setPeopleCount(p.peopleCount);
+                        // Restore timer if running
+                        if(p.timerMode === 'running' && p.targetTime) {
+                            setTimerMode('running');
+                            setStartTime(p.startTime);
+                            setTargetTime(p.targetTime);
+                        }
+                    } catch(e) {}
+                }
+            }, []);
+
+            useEffect(() => {
+                localStorage.setItem('sushiro_v30', JSON.stringify({ counts, extraItems, peopleCount, timerMode, startTime, targetTime }));
+            }, [counts, extraItems, peopleCount, timerMode, startTime, targetTime]);
+
+            // Timer Logic
+            useEffect(() => {
+                let interval;
+                if (timerMode === 'running' && targetTime) {
+                    interval = setInterval(() => {
+                        const left = targetTime - Date.now();
+                        if (left <= 0) {
+                            setRemainingMs(0);
+                            setTimerMode('paused');
+                            haptic();
+                        } else {
+                            setRemainingMs(left);
+                        }
+                    }, 1000);
+                }
+                return () => clearInterval(interval);
+            }, [timerMode, targetTime]);
+
+            // Actions
+            const updatePlate = (id, delta) => {
+                saveToHistory();
+                setCounts(prev => ({ ...prev, [id]: Math.max(0, prev[id] + delta) }));
+                haptic();
+            };
+
+            const addExtra = (price) => {
+                saveToHistory();
+                setExtraItems(prev => {
+                    const existing = prev.find(i => i.price === price);
+                    if (existing) return prev.map(i => i.price === price ? { ...i, count: i.count + 1 } : i);
+                    return [...prev, { id: Date.now(), price, count: 1 }];
+                });
+                haptic();
+            };
+
+            const updateExtra = (id, delta) => {
+                saveToHistory();
+                setExtraItems(prev => prev.map(i => i.id === id ? { ...i, count: Math.max(0, i.count + delta) } : i).filter(i => i.count > 0));
+                haptic();
+            };
+
+            const handleUndo = () => {
+                if (!history.length) return;
+                const prev = history[history.length - 1];
+                setCounts(prev.counts);
+                setExtraItems(prev.extraItems);
+                setHistory(h => h.slice(0, -1));
+                haptic();
+            };
+
+            const handleReset = () => {
+                if (confirm('確定要清除所有紀錄嗎？')) {
+                    saveToHistory();
+                    setCounts({ red: 0, silver: 0, gold: 0, black: 0 });
+                    setExtraItems([]);
+                    setTimerMode('idle');
+                    haptic();
+                }
+            };
+
+            // Timer Actions
+            const startTimer = () => {
+                const now = Date.now();
+                setStartTime(now);
+                setTargetTime(now + 3600000);
+                setTimerMode('running');
+                haptic();
+            };
+            
+            const formatTime = (ms) => {
+                const s = Math.floor((ms / 1000) % 60);
+                const m = Math.floor((ms / 1000) / 60);
+                return `${m}:${s.toString().padStart(2, '0')}`;
+            };
+
+            // Calcs
+            const subtotal = Object.keys(counts).reduce((acc, key) => acc + counts[key] * PLATES.find(p => p.id === key).price, 0) 
+                           + extraItems.reduce((acc, i) => acc + i.price * i.count, 0);
+            const charge = Math.round(subtotal * 0.1);
+            const total = subtotal + charge;
+            const countTotal = Object.values(counts).reduce((a, b) => a + b, 0) + extraItems.reduce((a, b) => a + b.count, 0);
+            const perPerson = (total / peopleCount).toFixed(1);
+
+            return (
+                <div className="min-h-screen pb-48 max-w-lg mx-auto bg-slate-50 shadow-2xl relative">
+                    
+                    {/* Header */}
+                    <header className="bg-white/80 backdrop-blur-md sticky top-0 z-40 px-4 py-3 border-b border-slate-200/60 flex justify-between items-center">
+                        <div className="flex items-center space-x-2.5">
+                            <div className="w-9 h-9 bg-red-600 rounded-lg flex items-center justify-center text-white font-black text-lg shadow-sm">
+                                寿
+                            </div>
+                            <h1 className="text-lg font-bold text-slate-800 tracking-tight">計算機</h1>
+                        </div>
+                        <div className="flex space-x-2">
+                            <button 
+                                onClick={handleUndo} 
+                                disabled={!history.length}
+                                className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${history.length ? 'bg-slate-100 text-slate-700 active:bg-slate-200' : 'bg-slate-50 text-slate-300'}`}
+                            >
+                                <Icon path={Icons.Undo} size={18} />
+                            </button>
+                            <button onClick={handleReset} className="w-9 h-9 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-colors">
+                                <Icon path={Icons.Trash} size={18} />
+                            </button>
+                        </div>
+                    </header>
+
+                    {/* Content */}
+                    <main className="p-4 space-y-6">
+                        
+                        {/* Plates Grid */}
+                        <div className="grid grid-cols-2 gap-3">
+                            {PLATES.map(p => (
+                                <PlateCard key={p.id} plate={p} count={counts[p.id]} onUpdate={updatePlate} />
+                            ))}
+                        </div>
+
+                        {/* Quick Add Section */}
+                        <div className="space-y-3">
+                            <div className="flex items-center space-x-2 px-1">
+                                <div className="w-1 h-4 bg-blue-500 rounded-full"></div>
+                                <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">其他單品</h3>
+                            </div>
+                            
+                            <div className="grid grid-cols-5 gap-2">
+                                {OTHER_PRICES.map(price => (
+                                    <button 
+                                        key={price} 
+                                        onClick={() => addExtra(price)}
+                                        className="bg-white border border-slate-200 h-10 rounded-lg flex items-center justify-center font-bold text-slate-600 shadow-sm active:scale-95 active:bg-blue-50 active:text-blue-600 active:border-blue-200 transition-all"
+                                    >
+                                        {price}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <button 
+                                onClick={() => setShowKeypad(true)}
+                                className="w-full flex items-center justify-between bg-white border border-slate-200 border-dashed rounded-xl p-3 text-slate-400 hover:text-blue-500 hover:border-blue-300 hover:bg-blue-50/50 transition-all group"
+                            >
+                                <span className="font-medium text-sm group-hover:text-blue-600">自訂金額...</span>
+                                <div className="w-6 h-6 bg-slate-100 rounded-md flex items-center justify-center group-hover:bg-blue-200 text-slate-400 group-hover:text-blue-700">
+                                    <Icon path={Icons.Plus} size={14} />
+                                </div>
+                            </button>
+                        </div>
+
+                        {/* Extra Items List */}
+                        {extraItems.length > 0 && (
+                            <div className="space-y-2 animate-pop">
+                                {extraItems.map(item => (
+                                    <div key={item.id} className="flex items-center justify-between bg-white p-2 pr-3 rounded-xl shadow-sm border border-slate-100">
+                                        <div className="flex items-center space-x-3">
+                                            <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-700 font-black flex items-center justify-center text-sm">
+                                                ${item.price}
+                                            </div>
+                                            <div className="flex items-center bg-slate-100 rounded-lg h-8">
+                                                <button onClick={() => updateExtra(item.id, -1)} className="w-8 h-full flex items-center justify-center text-slate-500 active:bg-slate-200 rounded-l-lg">-</button>
+                                                <span className="w-6 text-center font-bold text-sm tabular-nums">{item.count}</span>
+                                                <button onClick={() => updateExtra(item.id, 1)} className="w-8 h-full flex items-center justify-center text-blue-600 active:bg-blue-100 rounded-r-lg">+</button>
+                                            </div>
+                                        </div>
+                                        <button onClick={() => { saveToHistory(); setExtraItems(prev => prev.filter(i => i.id !== item.id)); }} className="text-slate-300 p-2 hover:text-red-500 transition-colors">
+                                            <Icon path={Icons.X} size={16} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </main>
+
+                    {/* Floating Footer */}
+                    <div className="fixed bottom-0 left-0 right-0 z-50 max-w-lg mx-auto">
+                        
+                        {/* Timer Bar (Conditional) */}
+                        <div className={`mx-4 mb-2 bg-slate-800 text-white rounded-2xl shadow-lg p-3 flex items-center justify-between transition-all duration-300 ${timerMode === 'idle' ? 'translate-y-full opacity-0 absolute bottom-0 left-0 right-0 pointer-events-none' : 'translate-y-0 opacity-100'}`}>
+                            <div className="flex items-center space-x-3">
+                                <div className={`w-2 h-2 rounded-full ${remainingMs < 900000 ? 'bg-red-500 animate-pulse' : 'bg-green-400'}`}></div>
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">剩餘時間</span>
+                                    <span className="font-mono text-xl font-bold leading-none">{formatTime(remainingMs)}</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                {timerMode === 'running' 
+                                    ? <button onClick={() => setTimerMode('paused')} className="p-2 bg-white/10 rounded-lg hover:bg-white/20"><Icon path={Icons.Pause} size={16}/></button>
+                                    : <button onClick={() => setTimerMode('running')} className="p-2 bg-green-500 text-white rounded-lg"><Icon path={Icons.Play} size={16}/></button>
+                                }
+                                <button onClick={() => setTimerMode('idle')} className="p-2 bg-white/10 rounded-lg hover:bg-red-500/80"><Icon path={Icons.Stop} size={16}/></button>
+                            </div>
+                        </div>
+
+                        {/* Main Bill Panel */}
+                        <div className="bg-white border-t border-slate-200 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] pb-safe rounded-t-3xl">
+                            
+                            {/* Timer Start Button (If Idle) */}
+                            {timerMode === 'idle' && (
+                                <div className="absolute -top-5 left-0 right-0 flex justify-center">
+                                    <button onClick={startTimer} className="bg-slate-800 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg flex items-center space-x-2 active:scale-95 transition-transform">
+                                        <Icon path={Icons.Timer} size={14} />
+                                        <span>開始 60 分鐘計時</span>
+                                    </button>
+                                </div>
+                            )}
+
+                            <div className="px-5 py-4 flex justify-between items-end">
+                                {/* Left: Total */}
+                                <div>
+                                    <div className="flex items-center space-x-2 text-slate-400 text-xs font-bold mb-1">
+                                        <span className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">Items: {countTotal}</span>
+                                        <span>+10% 服務費</span>
+                                    </div>
+                                    <div className="flex items-baseline text-slate-800">
+                                        <span className="text-2xl font-bold mr-1">$</span>
+                                        <span className="text-5xl font-black tracking-tighter">{total}</span>
+                                    </div>
+                                </div>
+
+                                {/* Right: Split Bill */}
+                                <div className="flex flex-col items-end space-y-2">
+                                    <div className="flex items-center bg-slate-100 rounded-full p-1 pl-3 space-x-2">
+                                        <Icon path={Icons.User} size={14} className="text-slate-400" />
+                                        <span className="font-bold text-sm w-4 text-center">{peopleCount}</span>
+                                        <div className="flex space-x-1">
+                                            <button onClick={() => setPeopleCount(Math.max(1, peopleCount - 1))} className="w-7 h-7 bg-white rounded-full shadow-sm flex items-center justify-center text-slate-600 active:scale-90 transition-transform"><Icon path={Icons.Minus} size={12} /></button>
+                                            <button onClick={() => setPeopleCount(peopleCount + 1)} className="w-7 h-7 bg-white rounded-full shadow-sm flex items-center justify-center text-blue-600 active:scale-90 transition-transform"><Icon path={Icons.Plus} size={12} /></button>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="text-xs font-bold text-slate-400 uppercase mr-1">每人</span>
+                                        <span className="text-xl font-black text-blue-600">${perPerson}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {showKeypad && (
+                        <Keypad 
+                            value={customPrice} 
+                            onChange={setCustomPrice} 
+                            onAdd={() => { if(customPrice) { addExtra(parseInt(customPrice)); setCustomPrice(''); setShowKeypad(false); } }} 
+                            onClose={() => setShowKeypad(false)} 
+                        />
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<SushiroApp />);
+    </script>
+</body>
+</html>
